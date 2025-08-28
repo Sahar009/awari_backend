@@ -14,25 +14,21 @@ const __dirname = path.dirname(__filename);
 
 
 
-// message handler
 export const messageHandler = (message, success, statusCode, data) => {
   return { message, success, statusCode, data }
 }
 
-// hash password
 export const hashPassword = async (password) => {
   const salt = await bcrypt.genSalt(10)
   return await bcrypt.hash(password, salt)
 }
 
 
-// verify password
 export const verifyPassword = async (password, hashedPassword) => {
   return await bcrypt.compare(password, hashedPassword) 
 }
 
 
-// generate token
 const SECRET_KEY = process.env.JWT_SECRET
 
 export const generateToken = (payload, expiresIn = '1d') => {
@@ -50,8 +46,6 @@ export const generateAdminToken = (adminData, expiresIn = '1d') => {
 };
 
 
-
-// verify token
 export const verifyToken = (token) => {
   try {
     const decoded = jwt.verify(token, SECRET_KEY)
@@ -61,7 +55,6 @@ export const verifyToken = (token) => {
   }
 }
 
-// phone number validator
 const COUNTRY_CODE = "234"
 
 export const passwordValidator = value => {
@@ -117,7 +110,6 @@ export const normalizePhoneToLocalFormat = (phone) => {
 
 
 
-// Generate a verification code
 export const generateVerificationCode = (length = 6) => {
   return Math.floor(Math.random() * Math.pow(10, length))
     .toString()
