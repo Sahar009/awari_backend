@@ -6,11 +6,13 @@ import router from './routes/index.js'
 import cors from 'cors'
 import morgan from 'morgan'
 import errorMiddleware from './middlewares/errorMiddleware.js'
+import http from 'http' 
+import helmet from 'helmet'
 
 
 const app = express()
 const server = http.createServer(app)
-const io = setupChatServer(server)
+
 const port = process.env.PORT
 
 app.use(helmet())
