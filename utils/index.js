@@ -1,4 +1,3 @@
-import cloudinaryModule from 'cloudinary'
 import nodemailer from 'nodemailer'
 import hbs from 'nodemailer-express-handlebars'
 import multer from 'multer'
