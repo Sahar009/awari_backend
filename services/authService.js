@@ -1,4 +1,3 @@
-import jwt from 'jsonwebtoken';
 import { User } from '../schema/index.js';
 import { 
   hashPassword, 
