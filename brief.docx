@@ -1,0 +1,228 @@
+🏡 Project Brief: AWARI Projects – Real Estate & Shortlet Platform
+📌 Overview
+
+AWARI Projects is a real estate marketplace platform that connects renters, buyers, shortlet clients, landlords, agents, hotel providers, and administrators. The platform allows property listing, booking, inspection scheduling, payments, reviews, and user management in a seamless, secure, and scalable way.
+
+It combines features of Airbnb (shortlets & hotels) and property sales/rental portals (real estate marketplace), with separate role-based dashboards for users, landlords/agents, hotel providers, and admins.
+
+🎯 Objectives
+
+Provide an intuitive, SEO-friendly public website to showcase properties.
+
+Enable users to rent, buy, or book short-term stays.
+
+Allow landlords/agents to list, manage, and monetize properties.
+
+Provide hotel providers with a shortlet management dashboard.
+
+Enable secure payments, inspections, and document verification.
+
+Give admins tools to monitor, approve, and manage the entire ecosystem.
+
+👥 User Roles
+
+Public Visitors (Unauthenticated) → Browse listings, search/filter, view property details.
+
+Renters / Buyers → Create accounts, upload KYC, book inspections, make payments, leave reviews.
+
+Shortlet Clients → Browse short-term properties/hotels, book, pay, review.
+
+Landlords / Agents → Manage listings, inspections, bookings, and earnings.
+
+Hotel Providers → Manage apartments/rooms, availability calendar, bookings, and payments.
+
+Admins → Oversee platform operations, approve users/listings, manage disputes, transactions, and site content.
+
+🖥 Core Modules & Features
+1. Public Website (Unauthenticated)
+
+Home → Featured listings, search by location/price/type, call-to-action (sign up, post property).
+
+Listings → Rentals, Sales, Shortlets, Hotels.
+
+Filters → Location, price range, amenities, property type.
+
+Property Details → Photos, description, availability, reviews.
+
+Static Pages → About, Contact, FAQ/Support.
+
+2. User Dashboard (Authenticated)
+
+Profile → Personal info, KYC uploads, reviews.
+
+Rentals → My applications, inspection calendar, payment statements.
+
+Purchases → Viewed properties, inspections, schedule visits, leave reviews.
+
+Shortlet Bookings → Current bookings, history, payment status.
+
+3. Landlord/Agent Dashboard
+
+Profile & subscription management.
+
+Add/manage property listings.
+
+Upload media (images, videos).
+
+Set inspection dates (calendar view).
+
+Manage client booking requests.
+
+Messaging with clients.
+
+Track earnings & payment logs.
+
+4. Hotel/Apartment Provider Dashboard
+
+Manage room/apartment listings.
+
+Availability calendar & pricing/discounts.
+
+Manage bookings (current, history, cancellations).
+
+Reviews & ratings.
+
+Payments & transactions.
+
+5. Admin Dashboard
+
+Overview → User stats, property counts.
+
+User Management → Approve landlords, ban/suspend accounts.
+
+Property Listings → Approve/deny before publishing, mark as featured.
+
+Transactions → Manage payments, subscriptions, pricing plans.
+
+Reviews/Reports → Moderate flagged reviews, disputes, reported listings.
+
+Content Management → Update FAQs, banners, announcements.
+
+6. System Integrations
+
+Payments → Paystack, Flutterwave, or Stripe.
+
+Calendar API → Google Calendar + FullCalendar for inspections/bookings.
+
+Notifications → Email (SendGrid), SMS (Twilio), push (Firebase).
+
+Authentication → JWT + OAuth (Google, Facebook).
+
+File Uploads → Cloudinary or AWS S3 for images/docs.
+
+Search & Caching → Redis + ElasticSearch/Meilisearch for fast property filtering.
+
+Analytics & Logging → Google Analytics, Sentry, PostHog.
+
+🗄 Database Design (High-Level Entities)
+
+User (roles: renter, buyer, landlord, hotel_provider, admin).
+
+KYC Document (for verification).
+
+Property (type: rental, sale, shortlet).
+
+Property Media (images/videos).
+
+Booking (shortlet/hotel bookings).
+
+Inspection (scheduled visits for rentals/sales).
+
+Transaction/Payment (linked to bookings).
+
+Review (user feedback on properties/agents).
+
+Message (chat between users/landlords).
+
+🔄 User Flow
+Renters:
+
+Sign up → Upload KYC → Browse rentals.
+
+Schedule inspection → Landlord confirms.
+
+Apply & pay → Booking confirmed.
+
+Stay complete → Leave review.
+
+Buyers:
+
+Sign up → Browse property sales.
+
+Schedule inspection → Visit property.
+
+Leave reviews → Contact agent.
+
+Shortlet Clients:
+
+Sign up → Browse shortlets/hotels.
+
+Book & pay → Confirmed.
+
+Stay → Leave review.
+
+Landlords/Agents:
+
+Sign up → Subscribe → Add properties.
+
+Manage inspections, bookings, messages.
+
+Track payments & earnings.
+
+Hotel Providers:
+
+Sign up → Add rooms/apartments.
+
+Manage availability, pricing, bookings.
+
+Get paid & view ratings.
+
+Admins:
+
+Login → Dashboard overview.
+
+Approve/deny users & properties.
+
+Manage transactions & disputes.
+
+Push ads & content updates.
+
+⚙️ Technology Stack
+
+Frontend: Next.js (React) + TailwindCSS + shadcn/ui.
+
+Backend: Node.js (NestJS/Express) + REST/GraphQL API.
+
+Database: PostgreSQL (via Prisma ORM).
+
+Cache/Search: Redis + Meilisearch/ElasticSearch.
+
+File Storage: Cloudinary / AWS S3.
+
+Hosting: Vercel (frontend), Railway/Render/Heroku (backend & DB).
+
+Auth & Security: JWT, OAuth, role-based access control (RBAC).
+
+📅 Development Roadmap (MVP → Full Platform)
+
+Setup core backend (NestJS + PostgreSQL + Prisma).
+
+Build frontend public pages (Next.js + Tailwind).
+
+Implement authentication & roles.
+
+Develop property management (listings, media uploads).
+
+Add booking & inspection features.
+
+Integrate payments & transactions.
+
+Build user/landlord dashboards.
+
+Build hotel provider dashboard.
+
+Build admin dashboard.
+
+Integrations: notifications, calendar, analytics.
+
+✅ With this roadmap + architecture, you’ll have a scalable Airbnb-like real estate platform ready for both MVP launch and long-term scaling.
