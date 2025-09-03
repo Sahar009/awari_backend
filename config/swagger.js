@@ -797,7 +797,9 @@ const specs = {
           }
         }
       }
-    }
+    },
+    // Property endpoints are documented in routes/propertyRoutes.js
+    // The comprehensive Swagger documentation is embedded in the route definitions
   }
 };
 

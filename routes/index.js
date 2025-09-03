@@ -1,11 +1,13 @@
 import express from 'express';
 import authRoutes from './authRoutes.js';
 import kycRoutes from './kycRoutes.js';
+import propertyRoutes from './propertyRoutes.js';
 
 const router = (app) => {
   // API routes
   app.use('/api/auth', authRoutes);
   app.use('/api/kyc', kycRoutes);
+  app.use('/api/properties', propertyRoutes);
 
   app.get('/api/health', (req, res) => {
     res.status(200).json({

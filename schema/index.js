@@ -16,6 +16,7 @@ const defineAssociations = () => {
   User.hasMany(KycDocument, { as: 'kycDocuments', foreignKey: 'userId' });
   User.hasMany(Property, { as: 'ownedProperties', foreignKey: 'ownerId' });
   User.hasMany(Property, { as: 'agentProperties', foreignKey: 'agentId' });
+  User.hasMany(Property, { as: 'approvedProperties', foreignKey: 'approvedBy' });
   User.hasMany(Booking, { as: 'userBookings', foreignKey: 'userId' });
   User.hasMany(Booking, { as: 'ownerBookings', foreignKey: 'ownerId' });
   User.hasMany(Review, { as: 'reviews', foreignKey: 'reviewerId' });
@@ -34,6 +35,7 @@ const defineAssociations = () => {
   // Property associations
   Property.belongsTo(User, { as: 'owner', foreignKey: 'ownerId' });
   Property.belongsTo(User, { as: 'agent', foreignKey: 'agentId' });
+  Property.belongsTo(User, { as: 'approver', foreignKey: 'approvedBy' });
   Property.hasMany(PropertyMedia, { as: 'media', foreignKey: 'propertyId' });
   Property.hasMany(Booking, { as: 'bookings', foreignKey: 'propertyId' });
   Property.hasMany(Review, { as: 'reviews', foreignKey: 'propertyId' });
