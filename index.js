@@ -14,7 +14,8 @@ const PORT = process.env.PORT || 8000; // Changed to match your current port
 app.use(helmet());
 
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:8000', 'http://localhost:3000', 'http://localhost:3001'],
+  // origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:8000', 'http://localhost:3000', 'http://localhost:3001'],
+  origin:'*',
   credentials: true
 }));
 
