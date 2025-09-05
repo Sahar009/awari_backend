@@ -1,6 +1,5 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../database/db.js';
-import bcrypt from 'bcryptjs';
 
 const User = sequelize.define('User', {
   id: {
@@ -165,17 +164,9 @@ const User = sequelize.define('User', {
   paranoid: true, // Enable soft deletes
   hooks: {
     beforeCreate: async (user) => {
-      if (user.passwordHash) {
-        user.passwordHash = await bcrypt.hash(user.passwordHash, 12);
-      }
       // Set email verification expiry to 10 minutes from now
       if (user.emailVerificationCode) {
         user.emailVerificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-      }
-    },
-    beforeUpdate: async (user) => {
-      if (user.changed('passwordHash') && user.passwordHash) {
-        user.passwordHash = await bcrypt.hash(user.passwordHash, 12);
       }
     },
     beforeValidate: (user) => {
@@ -192,7 +183,9 @@ User.prototype.comparePassword = async function(candidatePassword) {
   if (!this.passwordHash) {
     return false;
   }
-  return await bcrypt.compare(candidatePassword, this.passwordHash);
+  // Import verifyPassword utility function
+  const { verifyPassword } = await import('../utils/index.js');
+  return await verifyPassword(candidatePassword, this.passwordHash);
 };
 
 // Instance method to get full name

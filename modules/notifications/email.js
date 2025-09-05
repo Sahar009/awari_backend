@@ -28,13 +28,13 @@ export const sendEmail = async (to, subject, text, template, context) => {
   
     const hbsOptions = {
       viewEngine: {
-        extName: '.handlebars',
-        partialsDir: path.resolve(__dirname, '..', 'views'), // Changed path to go up one level
-        layoutsDir: path.resolve(__dirname, '..', 'views'),  // Changed path to go up one level
+        extName: '.ejs',
+        partialsDir: path.resolve(__dirname, '..', 'views'), 
+        layoutsDir: path.resolve(__dirname, '..', 'views'), 
         defaultLayout: false,
       },
-      viewPath: path.resolve(__dirname, '..', 'views'), // Changed path to go up one level
-      extName: '.handlebars',
+      viewPath: path.resolve(__dirname, '..', 'views'),
+      extName: '.ejs',
     }
   
     transporter.use('compile', hbs(hbsOptions))
