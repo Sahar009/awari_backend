@@ -584,6 +584,62 @@ router.get('/', getPropertiesValidation, propertyController.getAllProperties);
 
 /**
  * @swagger
+ * /api/properties/my-properties:
+ *   get:
+ *     summary: Get current user's properties
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of properties per page
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [draft, pending, active, inactive, sold, rented, rejected, archived]
+ *         description: Filter by status
+ *       - in: query
+ *         name: propertyType
+ *         schema:
+ *           type: string
+ *           enum: [apartment, house, villa, condo, studio, penthouse, townhouse, duplex, bungalow, land, commercial, office, shop, warehouse]
+ *         description: Filter by property type
+ *       - in: query
+ *         name: listingType
+ *         schema:
+ *           type: string
+ *           enum: [rent, sale, shortlet]
+ *         description: Filter by listing type
+ *     responses:
+ *       200:
+ *         description: User properties retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PropertiesResponse'
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/my-properties', authenticateToken, getOwnerPropertiesValidation, propertyController.getPropertiesByOwner);
+
+/**
+ * @swagger
  * /api/properties/{propertyId}:
  *   get:
  *     summary: Get a specific property by ID
@@ -779,61 +835,6 @@ router.post('/upload',
   propertyController.createProperty
 );
 
-/**
- * @swagger
- * /api/properties/my-properties:
- *   get:
- *     summary: Get current user's properties
- *     tags: [Properties]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 1
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 100
- *           default: 10
- *         description: Number of properties per page
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [draft, pending, active, inactive, sold, rented, rejected, archived]
- *         description: Filter by status
- *       - in: query
- *         name: propertyType
- *         schema:
- *           type: string
- *           enum: [apartment, house, villa, condo, studio, penthouse, townhouse, duplex, bungalow, land, commercial, office, shop, warehouse]
- *         description: Filter by property type
- *       - in: query
- *         name: listingType
- *         schema:
- *           type: string
- *           enum: [rent, sale, shortlet]
- *         description: Filter by listing type
- *     responses:
- *       200:
- *         description: User properties retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/PropertiesResponse'
- *       401:
- *         description: Unauthorized
- *       500:
- *         description: Internal server error
- */
-router.get('/my-properties', authenticateToken, getOwnerPropertiesValidation, propertyController.getPropertiesByOwner);
 
 /**
  * @swagger
