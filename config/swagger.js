@@ -125,6 +125,19 @@ const specs = {
           createdAt: { type: 'string', format: 'date-time', description: 'Creation date' },
           updatedAt: { type: 'string', format: 'date-time', description: 'Last update date' }
         }
+      },
+      NewsletterSubscription: {
+        type: 'object',
+        required: ['email'],
+        properties: {
+          id: { type: 'string', format: 'uuid', description: 'Subscription ID' },
+          email: { type: 'string', format: 'email', description: 'Subscriber email address' },
+          status: { type: 'string', enum: ['subscribed', 'unsubscribed'], description: 'Subscription status' },
+          unsubscribeToken: { type: 'string', description: 'Token for secure unsubscribe' },
+          ipAddress: { type: 'string', description: 'IP address when subscribed' },
+          createdAt: { type: 'string', format: 'date-time', description: 'Subscription date' },
+          updatedAt: { type: 'string', format: 'date-time', description: 'Last update date' }
+        }
       }
     }
   },
@@ -1951,6 +1964,219 @@ const specs = {
           },
           '500': {
             description: 'Internal server error'
+          }
+        }
+      }
+    },
+    // Newsletter endpoints
+    '/api/newsletter/subscribe': {
+      post: {
+        tags: ['Newsletter'],
+        summary: 'Subscribe to newsletter',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['email'],
+                properties: {
+                  email: {
+                    type: 'string',
+                    format: 'email',
+                    example: 'user@example.com'
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '201': {
+            description: 'Successfully subscribed to newsletter'
+          },
+          '400': {
+            description: 'Invalid email or already subscribed'
+          }
+        }
+      }
+    },
+    '/api/newsletter/unsubscribe': {
+      post: {
+        tags: ['Newsletter'],
+        summary: 'Unsubscribe from newsletter',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['email'],
+                properties: {
+                  email: {
+                    type: 'string',
+                    format: 'email',
+                    example: 'user@example.com'
+                  },
+                  token: {
+                    type: 'string',
+                    description: 'Optional unsubscribe token for security'
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Successfully unsubscribed from newsletter'
+          },
+          '400': {
+            description: 'Email not found or already unsubscribed'
+          }
+        }
+      },
+      get: {
+        tags: ['Newsletter'],
+        summary: 'Unsubscribe from newsletter via email link',
+        parameters: [
+          {
+            in: 'query',
+            name: 'email',
+            required: true,
+            schema: {
+              type: 'string',
+              format: 'email'
+            },
+            description: 'Email address to unsubscribe'
+          },
+          {
+            in: 'query',
+            name: 'token',
+            schema: {
+              type: 'string'
+            },
+            description: 'Unsubscribe token for security'
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'HTML page confirming unsubscription',
+            content: {
+              'text/html': {
+                schema: {
+                  type: 'string'
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/newsletter/status/{email}': {
+      get: {
+        tags: ['Newsletter'],
+        summary: 'Check newsletter subscription status',
+        parameters: [
+          {
+            in: 'path',
+            name: 'email',
+            required: true,
+            schema: {
+              type: 'string',
+              format: 'email'
+            },
+            description: 'Email address to check'
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'Subscription status retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    message: { type: 'string' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        subscribed: { type: 'boolean' },
+                        subscribedAt: { type: 'string', format: 'date-time' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/newsletter/subscribers': {
+      get: {
+        tags: ['Newsletter'],
+        summary: 'Get newsletter subscribers (Admin only)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'query',
+            name: 'page',
+            schema: {
+              type: 'integer',
+              minimum: 1,
+              default: 1
+            },
+            description: 'Page number'
+          },
+          {
+            in: 'query',
+            name: 'limit',
+            schema: {
+              type: 'integer',
+              minimum: 1,
+              maximum: 100,
+              default: 50
+            },
+            description: 'Number of subscribers per page'
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'Subscribers retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    message: { type: 'string' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        subscribers: {
+                          type: 'array',
+                          items: {
+                            type: 'object',
+                            properties: {
+                              email: { type: 'string', format: 'email' },
+                              createdAt: { type: 'string', format: 'date-time' }
+                            }
+                          }
+                        },
+                        totalCount: { type: 'integer' },
+                        totalPages: { type: 'integer' },
+                        currentPage: { type: 'integer' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          '403': {
+            description: 'Admin access required'
           }
         }
       }

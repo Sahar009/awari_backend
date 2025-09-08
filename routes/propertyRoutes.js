@@ -766,6 +766,9 @@ router.post('/', authenticateToken, createPropertyValidation, propertyController
  *       500:
  *         description: Internal server error
  */
+// Debug route to check user authentication
+router.get('/debug/user-auth', authenticateToken, propertyController.checkUserAuth);
+
 router.post('/upload', 
   authenticateToken, 
   uploadPropertyMedia, 

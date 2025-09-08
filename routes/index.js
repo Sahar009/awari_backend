@@ -2,6 +2,7 @@ import express from 'express';
 import authRoutes from './authRoutes.js';
 import kycRoutes from './kycRoutes.js';
 import propertyRoutes from './propertyRoutes.js';
+import newsletterRoutes from './newsletterRoutes.js';
 import { sendEmail } from '../modules/notifications/email.js';
 
 const router = (app) => {
@@ -9,10 +10,22 @@ const router = (app) => {
   app.use('/api/auth', authRoutes);
   app.use('/api/kyc', kycRoutes);
   app.use('/api/properties', propertyRoutes);
+  app.use('/api/newsletter', newsletterRoutes);
 
-  // app.get('testmail', (req, res) => {
-  //   sendEmail()
-  // });
+  // Test email route
+  app.get(`/api/test-email`, async (req, res) => {
+    try {
+        const result = await sendEmail({
+            to: "sehindeshoes@gmail.com",
+            subject: 'Test Email from Awari',
+            template: 'test', 
+            context: { name: 'Test User' }
+        });
+        res.json({ success: true, result });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 
   app.get('/api/health', (req, res) => {
     res.status(200).json({

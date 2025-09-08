@@ -20,17 +20,83 @@ class PropertyController {
         });
       }
 
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated. Please login first.'
+        });
+      }
+
+      // Check if user ID exists
+      if (!req.user.id) {
+        return res.status(401).json({
+          success: false,
+          message: 'User ID not found. Please login again.'
+        });
+      }
+
       const ownerId = req.user.id;
       const propertyData = req.body;
       const uploadResults = req.uploadResults || null;
+
+      console.log('Creating property for user ID:', ownerId);
+      console.log('User object:', { id: req.user.id, email: req.user.email, role: req.user.role });
 
       const result = await propertyService.createProperty(ownerId, propertyData, uploadResults);
 
       res.status(201).json(result);
     } catch (error) {
+      console.error('Property creation error:', error);
+      
+      // Handle foreign key constraint errors specifically
+      if (error.message && error.message.includes('foreign key constraint fails')) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid user ID. Please logout and login again to refresh your session.'
+        });
+      }
+
       res.status(400).json({
         success: false,
         message: error.message
+      });
+    }
+  }
+
+  /**
+   * Debug: Check current user info
+   */
+  async checkUserAuth(req, res) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: 'No user found in request'
+        });
+      }
+
+      // Check if user exists in database
+      const { User } = await import('../schema/index.js');
+      const dbUser = await User.findByPk(req.user.id);
+
+      return res.status(200).json({
+        success: true,
+        message: 'User authentication check',
+        data: {
+          requestUser: { 
+            id: req.user.id, 
+            email: req.user.email, 
+            role: req.user.role 
+          },
+          userExistsInDB: !!dbUser,
+          dbUserStatus: dbUser?.status || 'not found'
+        }
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: 'Error checking user auth',
+        error: error.message
       });
     }
   }

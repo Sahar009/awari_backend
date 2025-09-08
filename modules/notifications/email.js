@@ -1,6 +1,7 @@
-import hbs from 'nodemailer-express-handlebars';
 import path from 'path';
 import nodemailer from 'nodemailer';
+import ejs from 'ejs';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -25,19 +26,26 @@ const createTransporter = () => {
 // Changed the function signature to accept an object with named parameters
 export const sendEmail = async (to, subject, text, template, context) => {
     const transporter = createTransporter()
-  
-    const hbsOptions = {
-      viewEngine: {
-        extName: '.ejs',
-        partialsDir: path.resolve(__dirname, '..', 'views'), 
-        layoutsDir: path.resolve(__dirname, '..', 'views'), 
-        defaultLayout: false,
-      },
-      viewPath: path.resolve(__dirname, '..', 'views'),
-      extName: '.ejs',
+    
+    let html = text; // Default to text if no template
+    
+    // If template is provided, render EJS template
+    if (template) {
+      try {
+        const templatePath = path.resolve(__dirname, '..', 'views', `${template}.ejs`);
+        
+        // Check if template file exists
+        if (fs.existsSync(templatePath)) {
+          html = await ejs.renderFile(templatePath, context || {});
+        } else {
+          console.warn(`Template file not found: ${templatePath}`);
+          html = text; // Fallback to text
+        }
+      } catch (error) {
+        console.error('Error rendering EJS template:', error);
+        html = text; // Fallback to text
+      }
     }
-  
-    transporter.use('compile', hbs(hbsOptions))
   
     const mailOptions = {
       from: {
@@ -47,8 +55,7 @@ export const sendEmail = async (to, subject, text, template, context) => {
       to: Array.isArray(to) ? to.join(', ') : to,
       subject,
       text,
-      template,
-      context
+      html // Use the rendered HTML instead of template/context
     }
   
     try {
@@ -57,5 +64,6 @@ export const sendEmail = async (to, subject, text, template, context) => {
       return true;
     } catch (error) {
       console.error('Error sending email:', error)
+      return false;
     }
 }

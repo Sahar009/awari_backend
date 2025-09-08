@@ -161,7 +161,8 @@ const User = sequelize.define('User', {
   }
 }, {
   timestamps: true,
-  paranoid: true, // Enable soft deletes
+  paranoid: true, 
+  tableName: 'Users',
   hooks: {
     beforeCreate: async (user) => {
       // Set email verification expiry to 10 minutes from now

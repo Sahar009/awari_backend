@@ -8,6 +8,7 @@ import Payment from './Payment.js';
 import Message from './Message.js';
 import Notification from './Notification.js';
 import Subscription from './Subscription.js';
+import NewsletterSubscription from './NewsletterSubscription.js';
 import Favorite from './Favorite.js';
 
 // Define associations
@@ -101,6 +102,7 @@ export {
   Message,
   Notification,
   Subscription,
+  NewsletterSubscription,
   Favorite
 };
 
@@ -115,5 +117,6 @@ export default {
   Message,
   Notification,
   Subscription,
+  NewsletterSubscription,
   Favorite
 };

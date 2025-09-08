@@ -85,11 +85,16 @@ export const processPropertyUploadedFiles = async (req, res, next) => {
             uploadOptions.quality = 'auto';
           }
 
+          uploadOptions.mimeType = file.mimetype;
+          
           const result = await uploadToCloudinary(file.buffer, uploadOptions);
           
-          // Add metadata
+          if (!result.success || !result.data) {
+            throw new Error(`Failed to upload ${file.originalname}: ${result.error || 'Unknown error'}`);
+          }
+          
           const mediaData = {
-            ...result,
+            ...result.data,  // This contains secure_url, public_id, etc.
             originalName: file.originalname,
             mimeType: file.mimetype,
             bytes: file.size,
@@ -121,11 +126,19 @@ export const processPropertyUploadedFiles = async (req, res, next) => {
         uploadOptions.quality = 'auto';
       }
 
+      // Add MIME type to upload options for proper data URI creation
+      uploadOptions.mimeType = req.file.mimetype;
+      
       const result = await uploadToCloudinary(req.file.buffer, uploadOptions);
       
-      // Add metadata
+      // Check if upload was successful
+      if (!result.success || !result.data) {
+        throw new Error(`Failed to upload ${req.file.originalname}: ${result.error || 'Unknown error'}`);
+      }
+      
+      // Add metadata - flatten the data structure
       const mediaData = {
-        ...result,
+        ...result.data,  // This contains secure_url, public_id, etc.
         originalName: req.file.originalname,
         mimeType: req.file.mimetype,
         bytes: req.file.size,
