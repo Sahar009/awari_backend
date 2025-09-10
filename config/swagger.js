@@ -138,6 +138,40 @@ const specs = {
           createdAt: { type: 'string', format: 'date-time', description: 'Subscription date' },
           updatedAt: { type: 'string', format: 'date-time', description: 'Last update date' }
         }
+      },
+      Favorite: {
+        type: 'object',
+        required: ['userId', 'propertyId'],
+        properties: {
+          id: { type: 'string', format: 'uuid', description: 'Favorite ID' },
+          userId: { type: 'string', format: 'uuid', description: 'User ID' },
+          propertyId: { type: 'string', format: 'uuid', description: 'Property ID' },
+          notes: { type: 'string', maxLength: 1000, description: 'Optional notes about this favorite' },
+          isActive: { type: 'boolean', default: true, description: 'Whether the favorite is active' },
+          metadata: { type: 'object', description: 'Additional metadata' },
+          createdAt: { type: 'string', format: 'date-time', description: 'Favorite creation date' },
+          updatedAt: { type: 'string', format: 'date-time', description: 'Last update date' }
+        }
+      },
+      FavoriteResponse: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid', description: 'Favorite ID' },
+          notes: { type: 'string', description: 'Notes about this favorite' },
+          createdAt: { type: 'string', format: 'date-time', description: 'Favorite creation date' },
+          property: { $ref: '#/components/schemas/Property' }
+        }
+      },
+      PaginationResponse: {
+        type: 'object',
+        properties: {
+          currentPage: { type: 'integer', description: 'Current page number' },
+          totalPages: { type: 'integer', description: 'Total number of pages' },
+          totalItems: { type: 'integer', description: 'Total number of items' },
+          itemsPerPage: { type: 'integer', description: 'Number of items per page' },
+          hasNextPage: { type: 'boolean', description: 'Whether there is a next page' },
+          hasPrevPage: { type: 'boolean', description: 'Whether there is a previous page' }
+        }
       }
     }
   },
@@ -2177,6 +2211,343 @@ const specs = {
           },
           '403': {
             description: 'Admin access required'
+          }
+        }
+      }
+    },
+    '/api/favorites': {
+      get: {
+        tags: ['Favorites'],
+        summary: 'Get user\'s favorite properties',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'query',
+            name: 'page',
+            schema: {
+              type: 'integer',
+              minimum: 1,
+              default: 1
+            },
+            description: 'Page number'
+          },
+          {
+            in: 'query',
+            name: 'limit',
+            schema: {
+              type: 'integer',
+              minimum: 1,
+              maximum: 100,
+              default: 10
+            },
+            description: 'Number of favorites per page'
+          },
+          {
+            in: 'query',
+            name: 'propertyType',
+            schema: {
+              type: 'string',
+              enum: ['apartment', 'house', 'villa', 'condo', 'studio', 'penthouse', 'townhouse', 'duplex', 'bungalow', 'land', 'commercial', 'office', 'shop', 'warehouse']
+            },
+            description: 'Filter by property type'
+          },
+          {
+            in: 'query',
+            name: 'listingType',
+            schema: {
+              type: 'string',
+              enum: ['rent', 'sale', 'shortlet']
+            },
+            description: 'Filter by listing type'
+          },
+          {
+            in: 'query',
+            name: 'status',
+            schema: {
+              type: 'string',
+              enum: ['draft', 'pending', 'active', 'inactive', 'sold', 'rented', 'rejected', 'archived']
+            },
+            description: 'Filter by property status'
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'Favorites retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    message: { type: 'string' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        favorites: {
+                          type: 'array',
+                          items: { $ref: '#/components/schemas/FavoriteResponse' }
+                        },
+                        pagination: { $ref: '#/components/schemas/PaginationResponse' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          '401': {
+            description: 'Unauthorized'
+          }
+        }
+      }
+    },
+    '/api/favorites/{propertyId}': {
+      post: {
+        tags: ['Favorites'],
+        summary: 'Add a property to favorites',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'propertyId',
+            required: true,
+            schema: {
+              type: 'string',
+              format: 'uuid'
+            },
+            description: 'Property ID'
+          }
+        ],
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  notes: {
+                    type: 'string',
+                    maxLength: 1000,
+                    description: 'Optional notes about this favorite'
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '201': {
+            description: 'Property added to favorites successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    message: { type: 'string' },
+                    data: { $ref: '#/components/schemas/Favorite' }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'Validation error'
+          },
+          '401': {
+            description: 'Unauthorized'
+          },
+          '404': {
+            description: 'Property not found'
+          },
+          '409': {
+            description: 'Property already in favorites'
+          }
+        }
+      },
+      delete: {
+        tags: ['Favorites'],
+        summary: 'Remove a property from favorites',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'propertyId',
+            required: true,
+            schema: {
+              type: 'string',
+              format: 'uuid'
+            },
+            description: 'Property ID'
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'Property removed from favorites successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    message: { type: 'string' }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'Validation error'
+          },
+          '401': {
+            description: 'Unauthorized'
+          },
+          '404': {
+            description: 'Property not found in favorites'
+          }
+        }
+      }
+    },
+    '/api/favorites/{propertyId}/status': {
+      get: {
+        tags: ['Favorites'],
+        summary: 'Check if a property is favorited',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'propertyId',
+            required: true,
+            schema: {
+              type: 'string',
+              format: 'uuid'
+            },
+            description: 'Property ID'
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'Favorite status retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    message: { type: 'string' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        isFavorited: { type: 'boolean' },
+                        favoriteId: { type: 'string', format: 'uuid', nullable: true },
+                        notes: { type: 'string', nullable: true }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'Validation error'
+          },
+          '401': {
+            description: 'Unauthorized'
+          }
+        }
+      }
+    },
+    '/api/favorites/{propertyId}/notes': {
+      put: {
+        tags: ['Favorites'],
+        summary: 'Update favorite notes',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'propertyId',
+            required: true,
+            schema: {
+              type: 'string',
+              format: 'uuid'
+            },
+            description: 'Property ID'
+          }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['notes'],
+                properties: {
+                  notes: {
+                    type: 'string',
+                    maxLength: 1000,
+                    description: 'Notes about this favorite'
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Favorite notes updated successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    message: { type: 'string' },
+                    data: { $ref: '#/components/schemas/Favorite' }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'Validation error'
+          },
+          '401': {
+            description: 'Unauthorized'
+          },
+          '404': {
+            description: 'Property not found in favorites'
+          }
+        }
+      }
+    },
+    '/api/favorites/clear': {
+      delete: {
+        tags: ['Favorites'],
+        summary: 'Clear all user\'s favorites',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'All favorites cleared successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    message: { type: 'string' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        clearedCount: { type: 'integer' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          '401': {
+            description: 'Unauthorized'
           }
         }
       }
