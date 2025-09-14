@@ -20,6 +20,7 @@ const defineAssociations = () => {
   User.hasMany(Property, { as: 'approvedProperties', foreignKey: 'approvedBy' });
   User.hasMany(Booking, { as: 'userBookings', foreignKey: 'userId' });
   User.hasMany(Booking, { as: 'ownerBookings', foreignKey: 'ownerId' });
+  User.hasMany(Booking, { as: 'cancelledBookings', foreignKey: 'cancelledBy' });
   User.hasMany(Review, { as: 'reviews', foreignKey: 'reviewerId' });
   User.hasMany(Review, { as: 'ownerReviews', foreignKey: 'ownerId' });
   User.hasMany(Payment, { as: 'payments', foreignKey: 'userId' });
@@ -50,6 +51,7 @@ const defineAssociations = () => {
   Booking.belongsTo(Property, { as: 'property', foreignKey: 'propertyId' });
   Booking.belongsTo(User, { as: 'user', foreignKey: 'userId' });
   Booking.belongsTo(User, { as: 'owner', foreignKey: 'ownerId' });
+  Booking.belongsTo(User, { as: 'cancelledByUser', foreignKey: 'cancelledBy' });
   Booking.hasMany(Payment, { as: 'payments', foreignKey: 'bookingId' });
   Booking.hasMany(Review, { as: 'reviews', foreignKey: 'bookingId' });
 

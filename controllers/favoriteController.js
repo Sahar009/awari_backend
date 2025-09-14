@@ -181,3 +181,4 @@ export const updateFavoriteNotes = async (req, res) => {
     });
   }
 };
+

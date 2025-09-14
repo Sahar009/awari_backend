@@ -4,6 +4,7 @@ import kycRoutes from './kycRoutes.js';
 import propertyRoutes from './propertyRoutes.js';
 import newsletterRoutes from './newsletterRoutes.js';
 import favoriteRoutes from './favoriteRoutes.js';
+import bookingRoutes from './bookingRoutes.js';
 import { sendEmail } from '../modules/notifications/email.js';
 
 const router = (app) => {
@@ -13,6 +14,7 @@ const router = (app) => {
   app.use('/api/properties', propertyRoutes);
   app.use('/api/newsletter', newsletterRoutes);
   app.use('/api/favorites', favoriteRoutes);
+  app.use('/api/bookings', bookingRoutes);
 
   // Test email route
   app.get(`/api/test-email`, async (req, res) => {

@@ -88,8 +88,8 @@ export const removeFromFavorites = async (userId, propertyId) => {
       };
     }
 
-    // Soft delete by setting isActive to false
-    await favorite.update({ isActive: false });
+    // Actually delete the favorite record to avoid unique constraint issues
+    await favorite.destroy();
 
     return {
       success: true,
@@ -238,21 +238,18 @@ export const checkFavoriteStatus = async (userId, propertyId) => {
  */
 export const clearAllFavorites = async (userId) => {
   try {
-    const result = await Favorite.update(
-      { isActive: false },
-      {
-        where: {
-          userId,
-          isActive: true
-        }
+    const result = await Favorite.destroy({
+      where: {
+        userId,
+        isActive: true
       }
-    );
+    });
 
     return {
       success: true,
-      message: `Cleared ${result[0]} favorites successfully`,
+      message: `Cleared ${result} favorites successfully`,
       data: {
-        clearedCount: result[0]
+        clearedCount: result
       },
       statusCode: 200
     };
@@ -310,3 +307,4 @@ export const updateFavoriteNotes = async (userId, propertyId, notes) => {
     };
   }
 };
+

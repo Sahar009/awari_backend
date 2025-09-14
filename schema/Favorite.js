@@ -41,7 +41,10 @@ const Favorite = sequelize.define('Favorite', {
   indexes: [
     {
       unique: true,
-      fields: ['userId', 'propertyId']
+      fields: ['userId', 'propertyId'],
+      where: {
+        isActive: true
+      }
     }
   ]
 });

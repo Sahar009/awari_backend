@@ -179,4 +179,31 @@ const Booking = sequelize.define('Booking', {
   tableName: 'bookings'
 });
 
+// Define associations
+Booking.associate = (models) => {
+  // Booking belongs to Property
+  Booking.belongsTo(models.Property, {
+    foreignKey: 'propertyId',
+    as: 'property'
+  });
+
+  // Booking belongs to User (who made the booking)
+  Booking.belongsTo(models.User, {
+    foreignKey: 'userId',
+    as: 'user'
+  });
+
+  // Booking belongs to User (property owner)
+  Booking.belongsTo(models.User, {
+    foreignKey: 'ownerId',
+    as: 'owner'
+  });
+
+  // Booking belongs to User (who cancelled the booking)
+  Booking.belongsTo(models.User, {
+    foreignKey: 'cancelledBy',
+    as: 'cancelledByUser'
+  });
+};
+
 export default Booking;
