@@ -2,6 +2,7 @@ import { Property, PropertyMedia, User } from '../schema/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../database/db.js';
 import { deleteFromCloudinary, extractPublicId } from '../config/cloudinary.js';
+import { sendTemplateNotification } from './notificationService.js';
 
 /**
  * Property Service - Business logic for property management
@@ -672,6 +673,25 @@ class PropertyService {
           }
         ]
       });
+
+      // Send notification to property owner
+      try {
+        const owner = updatedProperty.owner;
+        if (owner) {
+          if (moderationData.status === 'active') {
+            await sendTemplateNotification('PROPERTY_APPROVED', owner, {
+              property: updatedProperty
+            });
+          } else if (moderationData.status === 'rejected') {
+            await sendTemplateNotification('PROPERTY_REJECTED', owner, {
+              property: updatedProperty,
+              reason: moderationData.rejectionReason
+            });
+          }
+        }
+      } catch (notificationError) {
+        console.error('Error sending property moderation notification:', notificationError);
+      }
 
       return {
         success: true,

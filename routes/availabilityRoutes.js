@@ -772,3 +772,4 @@ router.get('/records/:propertyId', authenticateToken, async (req, res) => {
 });
 
 export default router;
+

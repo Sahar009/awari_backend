@@ -6,6 +6,7 @@ import newsletterRoutes from './newsletterRoutes.js';
 import favoriteRoutes from './favoriteRoutes.js';
 import bookingRoutes from './bookingRoutes.js';
 import availabilityRoutes from './availabilityRoutes.js';
+import notificationRoutes from './notificationRoutes.js';
 import { sendEmail } from '../modules/notifications/email.js';
 
 const router = (app) => {
@@ -17,6 +18,7 @@ const router = (app) => {
   app.use('/api/favorites', favoriteRoutes);
   app.use('/api/bookings', bookingRoutes);
   app.use('/api/availability', availabilityRoutes);
+  app.use('/api/notifications', notificationRoutes);
 
   // Test email route
   app.get(`/api/test-email`, async (req, res) => {

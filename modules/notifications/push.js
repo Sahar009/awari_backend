@@ -11,6 +11,13 @@ class PushNotificationService {
 
     initialize() {
         try {
+            // Check if Firebase credentials are available
+            if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_PRIVATE_KEY) {
+                console.warn('⚠️ Firebase credentials not found. Push notifications will be disabled.');
+                this.messaging = null;
+                return;
+            }
+
             if (!admin.apps.length) {
                 const serviceAccount = {
                     type: "service_account",
@@ -32,15 +39,20 @@ class PushNotificationService {
             }
             
             this.messaging = admin.messaging();
-            console.log('Firebase Messaging initialized successfully');
+            console.log('✅ Firebase Messaging initialized successfully');
         } catch (error) {
-            console.error('Firebase Messaging initialization error:', error);
-            throw error;
+            console.warn('⚠️ Firebase Messaging initialization failed. Push notifications will be disabled:', error.message);
+            this.messaging = null;
         }
     }
 
     async sendToDevice(token, notification) {
         try {
+            if (!this.messaging) {
+                console.warn('⚠️ Firebase Messaging not initialized. Push notification skipped.');
+                return { success: false, error: 'Firebase not initialized' };
+            }
+
             const message = this.buildMessage(token, notification);
             const response = await this.messaging.send(message);
             console.log('Successfully sent message:', response);
@@ -53,6 +65,11 @@ class PushNotificationService {
 
     async sendToMultipleDevices(tokens, notification) {
         try {
+            if (!this.messaging) {
+                console.warn('⚠️ Firebase Messaging not initialized. Push notifications skipped.');
+                return { successCount: 0, failureCount: tokens.length, responses: [] };
+            }
+
             const message = this.buildMulticastMessage(tokens, notification);
             const response = await this.messaging.sendMulticast(message);
             console.log('Successfully sent messages:', response);
@@ -69,6 +86,11 @@ class PushNotificationService {
 
     async sendToTopic(topic, notification) {
         try {
+            if (!this.messaging) {
+                console.warn('⚠️ Firebase Messaging not initialized. Push notification to topic skipped.');
+                return { success: false, error: 'Firebase not initialized' };
+            }
+
             const message = this.buildMessage(topic, notification, true);
             const response = await this.messaging.send(message);
             console.log('Successfully sent message to topic:', response);
@@ -81,6 +103,11 @@ class PushNotificationService {
 
     async subscribeToTopic(tokens, topic) {
         try {
+            if (!this.messaging) {
+                console.warn('⚠️ Firebase Messaging not initialized. Topic subscription skipped.');
+                return { success: false, error: 'Firebase not initialized' };
+            }
+
             const response = await this.messaging.subscribeToTopic(tokens, topic);
             console.log('Successfully subscribed to topic:', response);
             return response;
@@ -92,6 +119,11 @@ class PushNotificationService {
 
     async unsubscribeFromTopic(tokens, topic) {
         try {
+            if (!this.messaging) {
+                console.warn('⚠️ Firebase Messaging not initialized. Topic unsubscription skipped.');
+                return { success: false, error: 'Firebase not initialized' };
+            }
+
             const response = await this.messaging.unsubscribeFromTopic(tokens, topic);
             console.log('Successfully unsubscribed from topic:', response);
             return response;

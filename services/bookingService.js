@@ -7,6 +7,7 @@ import {
   unblockDatesForBooking, 
   checkDateRangeAvailability 
 } from './availabilityService.js';
+import { sendTemplateNotification } from './notificationService.js';
 
 /**
  * Create a new booking
@@ -627,6 +628,19 @@ export const cancelBooking = async (bookingId, userId, cancellationReason = null
       ]
     });
 
+    // Send notification to guest about booking cancellation
+    try {
+      const guest = await User.findByPk(booking.userId);
+      if (guest) {
+        await sendTemplateNotification('BOOKING_CANCELLED', guest, {
+          booking: updatedBooking,
+          property: updatedBooking.property
+        });
+      }
+    } catch (notificationError) {
+      console.error('Error sending booking cancellation notification:', notificationError);
+    }
+
     return {
       success: true,
       message: 'Booking cancelled successfully',
@@ -729,6 +743,19 @@ export const confirmBooking = async (bookingId, userId, ownerNotes = null) => {
         }
       ]
     });
+
+    // Send notification to guest about booking confirmation
+    try {
+      const guest = await User.findByPk(booking.userId);
+      if (guest) {
+        await sendTemplateNotification('BOOKING_CONFIRMED', guest, {
+          booking: updatedBooking,
+          property: updatedBooking.property
+        });
+      }
+    } catch (notificationError) {
+      console.error('Error sending booking confirmation notification:', notificationError);
+    }
 
     return {
       success: true,

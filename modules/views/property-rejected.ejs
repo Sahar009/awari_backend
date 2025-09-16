@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Rejected - AWARI</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2c5aa0;
+            margin-bottom: 10px;
+        }
+        .warning-icon {
+            font-size: 48px;
+            color: #dc3545;
+            margin-bottom: 20px;
+        }
+        .property-title {
+            color: #2c5aa0;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .property-details {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #666;
+        }
+        .detail-value {
+            color: #333;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #2c5aa0;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .cta-button:hover {
+            background-color: #1e3d6f;
+        }
+        .rejection-reason {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .next-steps {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">AWARI</div>
+            <div class="warning-icon">✗</div>
+            <h1 class="property-title">Property Rejected</h1>
+        </div>
+        
+        <div class="content">
+            <p>Hi <strong><%= user.firstName %></strong>,</p>
+            
+            <p>We're writing to inform you that your property listing has been rejected after review by our team.</p>
+            
+            <div class="property-details">
+                <h3>Property Details</h3>
+                <% if (property) { %>
+                <div class="detail-row">
+                    <span class="detail-label">Property Title:</span>
+                    <span class="detail-value"><%= property.title %></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Address:</span>
+                    <span class="detail-value"><%= property.address %></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Property Type:</span>
+                    <span class="detail-value"><%= property.propertyType %></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Listing Type:</span>
+                    <span class="detail-value"><%= property.listingType %></span>
+                </div>
+                <% } %>
+            </div>
+            
+            <div class="rejection-reason">
+                <h4>Rejection Reason:</h4>
+                <p><%= notification.message || 'Your property did not meet our quality standards. Please review the requirements and resubmit.' %></p>
+            </div>
+            
+            <div class="next-steps">
+                <h4>What You Can Do:</h4>
+                <ul>
+                    <li>Review our property listing guidelines</li>
+                    <li>Update your property information based on the feedback</li>
+                    <li>Add high-quality photos of your property</li>
+                    <li>Ensure all required information is complete and accurate</li>
+                    <li>Resubmit your property for review</li>
+                </ul>
+            </div>
+            
+            <p>Don't worry! You can make the necessary changes and resubmit your property for review. Our team is here to help you create a successful listing.</p>
+            
+            <div style="text-align: center;">
+                <a href="<%= actionUrl || 'https://awari.com/dashboard/properties' %>" class="cta-button">
+                    <%= actionText || 'Update Property' %>
+                </a>
+            </div>
+            
+            <p>If you have any questions about the rejection or need assistance with improving your listing, please don't hesitate to contact our support team.</p>
+            
+            <p>Best regards,<br>The AWARI Team</p>
+        </div>
+        
+        <div class="footer">
+            <p>This email was sent to <%= user.email %> regarding your property listing.</p>
+            <p>&copy; 2024 AWARI. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

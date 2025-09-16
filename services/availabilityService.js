@@ -441,3 +441,4 @@ export const getPropertyAvailabilityRecords = async (propertyId, options = {}) =
     throw new Error('Failed to get property availability records');
   }
 };
+

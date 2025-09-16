@@ -87,3 +87,4 @@ PropertyAvailability.associate = (models) => {
 };
 
 export default PropertyAvailability;
+

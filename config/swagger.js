@@ -271,6 +271,107 @@ const specs = {
           totalRevenue: { type: 'number' },
           successRate: { type: 'integer' }
         }
+      },
+      Notification: {
+        type: 'object',
+        required: ['userId', 'title', 'message'],
+        properties: {
+          id: { type: 'string', format: 'uuid', description: 'Notification ID' },
+          userId: { type: 'string', format: 'uuid', description: 'User ID' },
+          title: { type: 'string', description: 'Notification title' },
+          message: { type: 'string', description: 'Notification message' },
+          type: { type: 'string', enum: ['info', 'success', 'warning', 'error', 'reminder', 'announcement'], description: 'Notification type' },
+          category: { type: 'string', enum: ['booking', 'payment', 'property', 'message', 'system', 'reminder'], description: 'Notification category' },
+          priority: { type: 'string', enum: ['urgent', 'high', 'normal', 'low'], description: 'Notification priority' },
+          status: { type: 'string', enum: ['unread', 'read', 'archived'], description: 'Notification status' },
+          isRead: { type: 'boolean', description: 'Whether notification is read' },
+          readAt: { type: 'string', format: 'date-time', description: 'When notification was read' },
+          channels: { type: 'array', items: { type: 'string', enum: ['email', 'sms', 'push', 'in_app'] }, description: 'Delivery channels' },
+          actionUrl: { type: 'string', description: 'Action URL' },
+          actionText: { type: 'string', description: 'Action button text' },
+          propertyId: { type: 'string', format: 'uuid', description: 'Related property ID' },
+          bookingId: { type: 'string', format: 'uuid', description: 'Related booking ID' },
+          paymentId: { type: 'string', format: 'uuid', description: 'Related payment ID' },
+          scheduledAt: { type: 'string', format: 'date-time', description: 'When to send notification' },
+          expiresAt: { type: 'string', format: 'date-time', description: 'When notification expires' },
+          emailSent: { type: 'boolean', description: 'Whether email was sent' },
+          smsSent: { type: 'boolean', description: 'Whether SMS was sent' },
+          pushSent: { type: 'boolean', description: 'Whether push notification was sent' },
+          data: { type: 'object', description: 'Additional data' },
+          metadata: { type: 'object', description: 'Metadata' },
+          createdAt: { type: 'string', format: 'date-time', description: 'Creation timestamp' },
+          updatedAt: { type: 'string', format: 'date-time', description: 'Last update timestamp' }
+        }
+      },
+      NotificationTemplate: {
+        type: 'object',
+        properties: {
+          templateName: { type: 'string', enum: ['WELCOME', 'EMAIL_VERIFICATION', 'PASSWORD_RESET', 'BOOKING_CONFIRMED', 'BOOKING_CANCELLED', 'PROPERTY_APPROVED', 'PROPERTY_REJECTED', 'PAYMENT_SUCCESS', 'PAYMENT_FAILED'], description: 'Template name' },
+          userId: { type: 'string', format: 'uuid', description: 'User ID' },
+          additionalData: { type: 'object', description: 'Additional data for template' }
+        }
+      },
+      NotificationStats: {
+        type: 'object',
+        properties: {
+          total: { type: 'integer', description: 'Total notifications' },
+          unread: { type: 'integer', description: 'Unread notifications' },
+          byStatus: { type: 'object', description: 'Notifications by status' },
+          byCategory: { type: 'object', description: 'Notifications by category' }
+        }
+      },
+      NotificationPagination: {
+        type: 'object',
+        properties: {
+          page: { type: 'integer', description: 'Current page' },
+          limit: { type: 'integer', description: 'Items per page' },
+          total: { type: 'integer', description: 'Total items' },
+          pages: { type: 'integer', description: 'Total pages' }
+        }
+      },
+      NotificationResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', description: 'Success status' },
+          message: { type: 'string', description: 'Response message' },
+          data: { type: 'object', description: 'Response data' },
+          error: { type: 'string', description: 'Error message' }
+        }
+      },
+      BulkNotificationRequest: {
+        type: 'object',
+        required: ['userIds', 'title', 'message'],
+        properties: {
+          userIds: { type: 'array', items: { type: 'string', format: 'uuid' }, description: 'Array of user IDs' },
+          title: { type: 'string', description: 'Notification title' },
+          message: { type: 'string', description: 'Notification message' },
+          type: { type: 'string', enum: ['info', 'success', 'warning', 'error', 'reminder', 'announcement'] },
+          category: { type: 'string', enum: ['booking', 'payment', 'property', 'message', 'system', 'reminder'] },
+          priority: { type: 'string', enum: ['urgent', 'high', 'normal', 'low'] },
+          channels: { type: 'array', items: { type: 'string', enum: ['email', 'sms', 'push', 'in_app'] } }
+        }
+      },
+      TopicNotificationRequest: {
+        type: 'object',
+        required: ['topic', 'title', 'message'],
+        properties: {
+          topic: { type: 'string', enum: ['property_owners', 'guests', 'all_users'], description: 'Target topic' },
+          title: { type: 'string', description: 'Notification title' },
+          message: { type: 'string', description: 'Notification message' },
+          type: { type: 'string', enum: ['info', 'success', 'warning', 'error', 'reminder', 'announcement'] },
+          category: { type: 'string', enum: ['booking', 'payment', 'property', 'message', 'system', 'reminder'] },
+          priority: { type: 'string', enum: ['urgent', 'high', 'normal', 'low'] },
+          channels: { type: 'array', items: { type: 'string', enum: ['email', 'sms', 'push', 'in_app'] } }
+        }
+      },
+      DeliveryResults: {
+        type: 'object',
+        properties: {
+          email: { type: 'object', properties: { sent: { type: 'boolean' }, error: { type: 'string' } } },
+          sms: { type: 'object', properties: { sent: { type: 'boolean' }, error: { type: 'string' } } },
+          push: { type: 'object', properties: { sent: { type: 'boolean' }, error: { type: 'string' } } },
+          in_app: { type: 'object', properties: { sent: { type: 'boolean' }, error: { type: 'string' } } }
+        }
       }
     }
   },
@@ -3222,6 +3323,454 @@ const specs = {
           '500': {
             description: 'Internal server error'
           }
+        }
+      }
+    },
+    '/api/notifications': {
+      post: {
+        tags: ['Notifications'],
+        summary: 'Create a new notification',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/Notification' },
+              example: {
+                userId: '123e4567-e89b-12d3-a456-426614174000',
+                title: 'Welcome to AWARI!',
+                message: 'Thank you for joining our platform.',
+                type: 'success',
+                category: 'system',
+                priority: 'normal',
+                channels: ['email', 'in_app'],
+                actionUrl: '/dashboard',
+                actionText: 'Get Started'
+              }
+            }
+          }
+        },
+        responses: {
+          '201': {
+            description: 'Notification created successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/NotificationResponse' }
+              }
+            }
+          },
+          '400': { description: 'Bad request' },
+          '401': { description: 'Unauthorized' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/notifications/send': {
+      post: {
+        tags: ['Notifications'],
+        summary: 'Create and send notification immediately',
+        description: 'Creates a notification and immediately sends it through the specified channels',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/Notification' },
+              example: {
+                userId: '123e4567-e89b-12d3-a456-426614174000',
+                title: 'Booking Confirmed!',
+                message: 'Your booking has been confirmed successfully.',
+                type: 'success',
+                category: 'booking',
+                priority: 'high',
+                channels: ['email', 'push', 'in_app'],
+                actionUrl: '/bookings/123',
+                actionText: 'View Booking',
+                bookingId: '123e4567-e89b-12d3-a456-426614174001'
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Notification created and sent successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/NotificationResponse' }
+              }
+            }
+          },
+          '400': { description: 'Bad request' },
+          '401': { description: 'Unauthorized' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/notifications/template': {
+      post: {
+        tags: ['Notifications'],
+        summary: 'Send notification using predefined template',
+        description: 'Sends a notification using one of the predefined templates with automatic content generation',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/NotificationTemplate' },
+              examples: {
+                welcome: {
+                  summary: 'Welcome notification',
+                  value: {
+                    templateName: 'WELCOME',
+                    userId: '123e4567-e89b-12d3-a456-426614174000'
+                  }
+                },
+                booking_confirmed: {
+                  summary: 'Booking confirmation',
+                  value: {
+                    templateName: 'BOOKING_CONFIRMED',
+                    userId: '123e4567-e89b-12d3-a456-426614174000',
+                    additionalData: {
+                      booking: {
+                        id: '123e4567-e89b-12d3-a456-426614174001',
+                        checkInDate: '2024-01-15',
+                        checkOutDate: '2024-01-18'
+                      },
+                      property: {
+                        id: '123e4567-e89b-12d3-a456-426614174002',
+                        title: 'Beautiful Apartment',
+                        address: '123 Main St'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Template notification sent successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/NotificationResponse' }
+              }
+            }
+          },
+          '400': { description: 'Bad request' },
+          '401': { description: 'Unauthorized' },
+          '404': { description: 'User not found' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/notifications/bulk': {
+      post: {
+        tags: ['Notifications'],
+        summary: 'Send notifications to multiple users',
+        description: 'Sends the same notification to multiple users at once',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/BulkNotificationRequest' },
+              example: {
+                userIds: [
+                  '123e4567-e89b-12d3-a456-426614174000',
+                  '123e4567-e89b-12d3-a456-426614174001',
+                  '123e4567-e89b-12d3-a456-426614174002'
+                ],
+                title: 'System Maintenance Notice',
+                message: 'Scheduled maintenance will occur tonight at 2 AM. The system will be unavailable for 2 hours.',
+                type: 'warning',
+                category: 'system',
+                priority: 'normal',
+                channels: ['email', 'in_app']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Bulk notifications sent successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/NotificationResponse' }
+              }
+            }
+          },
+          '400': { description: 'Bad request' },
+          '401': { description: 'Unauthorized' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/notifications/topic': {
+      post: {
+        tags: ['Notifications'],
+        summary: 'Send notification by user topic/role',
+        description: 'Sends notifications to all users with a specific role or topic (admin only)',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/TopicNotificationRequest' },
+              examples: {
+                property_owners: {
+                  summary: 'Notify all property owners',
+                  value: {
+                    topic: 'property_owners',
+                    title: 'New Feature Available',
+                    message: 'Check out our new property analytics dashboard in your dashboard.',
+                    type: 'info',
+                    category: 'property',
+                    priority: 'normal',
+                    channels: ['email', 'in_app']
+                  }
+                },
+                all_users: {
+                  summary: 'Notify all users',
+                  value: {
+                    topic: 'all_users',
+                    title: 'Platform Update',
+                    message: 'We\'ve made some improvements to enhance your experience on AWARI.',
+                    type: 'announcement',
+                    category: 'system',
+                    priority: 'normal',
+                    channels: ['email', 'in_app']
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Topic notification sent successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/NotificationResponse' }
+              }
+            }
+          },
+          '400': { description: 'Bad request' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Forbidden - Admin access required' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/notifications/user/{userId}': {
+      get: {
+        tags: ['Notifications'],
+        summary: 'Get user notifications with filtering and pagination',
+        description: 'Retrieves notifications for a specific user with optional filtering and pagination',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'userId',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'User ID'
+          },
+          {
+            in: 'query',
+            name: 'page',
+            schema: { type: 'integer', default: 1, minimum: 1 },
+            description: 'Page number'
+          },
+          {
+            in: 'query',
+            name: 'limit',
+            schema: { type: 'integer', default: 20, minimum: 1, maximum: 100 },
+            description: 'Number of notifications per page'
+          },
+          {
+            in: 'query',
+            name: 'status',
+            schema: { type: 'string', enum: ['unread', 'read', 'archived'] },
+            description: 'Filter by status'
+          },
+          {
+            in: 'query',
+            name: 'category',
+            schema: { type: 'string', enum: ['booking', 'payment', 'property', 'message', 'system', 'reminder'] },
+            description: 'Filter by category'
+          },
+          {
+            in: 'query',
+            name: 'type',
+            schema: { type: 'string', enum: ['info', 'success', 'warning', 'error', 'reminder', 'announcement'] },
+            description: 'Filter by type'
+          },
+          {
+            in: 'query',
+            name: 'unreadOnly',
+            schema: { type: 'boolean', default: false },
+            description: 'Show only unread notifications'
+          },
+          {
+            in: 'query',
+            name: 'includeArchived',
+            schema: { type: 'boolean', default: false },
+            description: 'Include archived notifications'
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'Notifications retrieved successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/NotificationResponse' }
+              }
+            }
+          },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Forbidden - Cannot access other user notifications' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/notifications/{notificationId}/read': {
+      patch: {
+        tags: ['Notifications'],
+        summary: 'Mark a specific notification as read',
+        description: 'Marks a single notification as read and updates the readAt timestamp',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'notificationId',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Notification ID'
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'Notification marked as read successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/NotificationResponse' }
+              }
+            }
+          },
+          '401': { description: 'Unauthorized' },
+          '404': { description: 'Notification not found' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/notifications/read-all': {
+      patch: {
+        tags: ['Notifications'],
+        summary: 'Mark all user notifications as read',
+        description: 'Marks all unread notifications for the authenticated user as read',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'All notifications marked as read successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/NotificationResponse' }
+              }
+            }
+          },
+          '401': { description: 'Unauthorized' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/notifications/{notificationId}/archive': {
+      patch: {
+        tags: ['Notifications'],
+        summary: 'Archive a notification',
+        description: 'Archives a notification (moves it to archived status)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'notificationId',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Notification ID'
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'Notification archived successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/NotificationResponse' }
+              }
+            }
+          },
+          '401': { description: 'Unauthorized' },
+          '404': { description: 'Notification not found' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/notifications/{notificationId}': {
+      delete: {
+        tags: ['Notifications'],
+        summary: 'Delete a notification',
+        description: 'Permanently deletes a notification from the database',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'notificationId',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Notification ID'
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'Notification deleted successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/NotificationResponse' }
+              }
+            }
+          },
+          '401': { description: 'Unauthorized' },
+          '404': { description: 'Notification not found' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/notifications/stats/{userId}': {
+      get: {
+        tags: ['Notifications'],
+        summary: 'Get notification statistics for a user',
+        description: 'Retrieves comprehensive statistics about notifications for a specific user',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'userId',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'User ID'
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'Notification statistics retrieved successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/NotificationResponse' }
+              }
+            }
+          },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Forbidden - Cannot access other user statistics' },
+          '500': { description: 'Internal server error' }
         }
       }
     }

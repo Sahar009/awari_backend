@@ -7,6 +7,7 @@ import {
   messageHandler 
 } from '../utils/index.js';
 import { sendEmail } from '../modules/notifications/email.js';
+import { sendTemplateNotification } from './notificationService.js';
 
 class AuthService {
   /**
@@ -39,6 +40,13 @@ class AuthService {
         await this.sendVerificationEmail(user.email, verificationCode, user.firstName);
       } catch (emailError) {
         console.warn('⚠️ Email verification failed, but user was created:', emailError.message);
+      }
+
+      // Send welcome notification
+      try {
+        await sendTemplateNotification('WELCOME', user);
+      } catch (notificationError) {
+        console.warn('⚠️ Welcome notification failed, but user was created:', notificationError.message);
       }
 
       const token = this.generateToken(user);
