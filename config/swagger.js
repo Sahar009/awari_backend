@@ -172,6 +172,105 @@ const specs = {
           hasNextPage: { type: 'boolean', description: 'Whether there is a next page' },
           hasPrevPage: { type: 'boolean', description: 'Whether there is a previous page' }
         }
+      },
+      Booking: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid', description: 'Booking ID' },
+          propertyId: { type: 'string', format: 'uuid', description: 'Property ID' },
+          userId: { type: 'string', format: 'uuid', description: 'User ID' },
+          ownerId: { type: 'string', format: 'uuid', description: 'Property owner ID' },
+          bookingType: { type: 'string', enum: ['shortlet', 'rental', 'sale_inspection'], description: 'Type of booking' },
+          status: { type: 'string', enum: ['pending', 'confirmed', 'cancelled', 'completed', 'rejected', 'expired'], description: 'Booking status' },
+          checkInDate: { type: 'string', format: 'date', description: 'Check-in date' },
+          checkOutDate: { type: 'string', format: 'date', description: 'Check-out date' },
+          inspectionDate: { type: 'string', format: 'date-time', description: 'Inspection date' },
+          inspectionTime: { type: 'string', format: 'time', description: 'Inspection time' },
+          numberOfNights: { type: 'integer', minimum: 1, description: 'Number of nights' },
+          numberOfGuests: { type: 'integer', minimum: 1, description: 'Number of guests' },
+          basePrice: { type: 'number', format: 'decimal', description: 'Base price' },
+          totalPrice: { type: 'number', format: 'decimal', description: 'Total price' },
+          currency: { type: 'string', example: 'NGN', description: 'Currency code' },
+          serviceFee: { type: 'number', format: 'decimal', description: 'Service fee' },
+          taxAmount: { type: 'number', format: 'decimal', description: 'Tax amount' },
+          discountAmount: { type: 'number', format: 'decimal', description: 'Discount amount' },
+          paymentStatus: { type: 'string', enum: ['pending', 'partial', 'completed', 'failed', 'refunded'], description: 'Payment status' },
+          paymentMethod: { type: 'string', description: 'Payment method' },
+          transactionId: { type: 'string', description: 'Transaction ID' },
+          guestName: { type: 'string', description: 'Guest name' },
+          guestPhone: { type: 'string', description: 'Guest phone' },
+          guestEmail: { type: 'string', format: 'email', description: 'Guest email' },
+          specialRequests: { type: 'string', description: 'Special requests' },
+          cancellationReason: { type: 'string', description: 'Cancellation reason' },
+          cancelledBy: { type: 'string', format: 'uuid', description: 'User who cancelled' },
+          cancelledAt: { type: 'string', format: 'date-time', description: 'Cancellation date' },
+          ownerNotes: { type: 'string', description: 'Owner notes' },
+          adminNotes: { type: 'string', description: 'Admin notes' },
+          createdAt: { type: 'string', format: 'date-time', description: 'Creation date' },
+          updatedAt: { type: 'string', format: 'date-time', description: 'Last update date' }
+        }
+      },
+      CreateBookingRequest: {
+        type: 'object',
+        required: ['propertyId', 'bookingType', 'basePrice', 'totalPrice'],
+        properties: {
+          propertyId: { type: 'string', format: 'uuid', description: 'Property ID' },
+          bookingType: { type: 'string', enum: ['shortlet', 'rental', 'sale_inspection'], description: 'Booking type' },
+          checkInDate: { type: 'string', format: 'date', description: 'Check-in date' },
+          checkOutDate: { type: 'string', format: 'date', description: 'Check-out date' },
+          inspectionDate: { type: 'string', format: 'date-time', description: 'Inspection date' },
+          inspectionTime: { type: 'string', format: 'time', description: 'Inspection time' },
+          numberOfNights: { type: 'integer', minimum: 1, description: 'Number of nights' },
+          numberOfGuests: { type: 'integer', minimum: 1, description: 'Number of guests' },
+          basePrice: { type: 'number', format: 'decimal', description: 'Base price' },
+          totalPrice: { type: 'number', format: 'decimal', description: 'Total price' },
+          currency: { type: 'string', default: 'NGN', description: 'Currency code' },
+          serviceFee: { type: 'number', format: 'decimal', description: 'Service fee' },
+          taxAmount: { type: 'number', format: 'decimal', description: 'Tax amount' },
+          discountAmount: { type: 'number', format: 'decimal', description: 'Discount amount' },
+          guestName: { type: 'string', description: 'Guest name' },
+          guestPhone: { type: 'string', description: 'Guest phone' },
+          guestEmail: { type: 'string', format: 'email', description: 'Guest email' },
+          specialRequests: { type: 'string', description: 'Special requests' }
+        }
+      },
+      BookingResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          message: { type: 'string' },
+          data: { $ref: '#/components/schemas/Booking' }
+        }
+      },
+      BookingsResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          message: { type: 'string' },
+          data: {
+            type: 'object',
+            properties: {
+              bookings: {
+                type: 'array',
+                items: { $ref: '#/components/schemas/Booking' }
+              },
+              pagination: { $ref: '#/components/schemas/PaginationResponse' }
+            }
+          }
+        }
+      },
+      BookingStatistics: {
+        type: 'object',
+        properties: {
+          total: { type: 'integer' },
+          pending: { type: 'integer' },
+          confirmed: { type: 'integer' },
+          completed: { type: 'integer' },
+          cancelled: { type: 'integer' },
+          rejected: { type: 'integer' },
+          totalRevenue: { type: 'number' },
+          successRate: { type: 'integer' }
+        }
       }
     }
   },
@@ -2548,6 +2647,580 @@ const specs = {
           },
           '401': {
             description: 'Unauthorized'
+          }
+        }
+      }
+    },
+    // Booking endpoints
+    '/api/bookings': {
+      post: {
+        tags: ['Bookings'],
+        summary: 'Create a new booking',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CreateBookingRequest' }
+            }
+          }
+        },
+        responses: {
+          '201': {
+            description: 'Booking created successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/BookingResponse' }
+              }
+            }
+          },
+          '400': {
+            description: 'Validation error or bad request'
+          },
+          '401': {
+            description: 'Unauthorized'
+          },
+          '404': {
+            description: 'Property not found'
+          },
+          '409': {
+            description: 'Property not available for selected dates'
+          },
+          '500': {
+            description: 'Internal server error'
+          }
+        }
+      },
+      get: {
+        tags: ['Bookings'],
+        summary: 'Get user\'s bookings',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'query',
+            name: 'page',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+            description: 'Page number'
+          },
+          {
+            in: 'query',
+            name: 'limit',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+            description: 'Number of bookings per page'
+          },
+          {
+            in: 'query',
+            name: 'status',
+            schema: { type: 'string', enum: ['pending', 'confirmed', 'cancelled', 'completed', 'rejected', 'expired'] },
+            description: 'Filter by booking status'
+          },
+          {
+            in: 'query',
+            name: 'bookingType',
+            schema: { type: 'string', enum: ['shortlet', 'rental', 'sale_inspection'] },
+            description: 'Filter by booking type'
+          },
+          {
+            in: 'query',
+            name: 'paymentStatus',
+            schema: { type: 'string', enum: ['pending', 'partial', 'completed', 'failed', 'refunded'] },
+            description: 'Filter by payment status'
+          },
+          {
+            in: 'query',
+            name: 'startDate',
+            schema: { type: 'string', format: 'date' },
+            description: 'Filter bookings from this date'
+          },
+          {
+            in: 'query',
+            name: 'endDate',
+            schema: { type: 'string', format: 'date' },
+            description: 'Filter bookings until this date'
+          },
+          {
+            in: 'query',
+            name: 'sortBy',
+            schema: { type: 'string', enum: ['createdAt', 'checkInDate', 'checkOutDate', 'totalPrice', 'status'], default: 'createdAt' },
+            description: 'Sort field'
+          },
+          {
+            in: 'query',
+            name: 'sortOrder',
+            schema: { type: 'string', enum: ['ASC', 'DESC'], default: 'DESC' },
+            description: 'Sort order'
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'Bookings retrieved successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/BookingsResponse' }
+              }
+            }
+          },
+          '401': {
+            description: 'Unauthorized'
+          },
+          '500': {
+            description: 'Internal server error'
+          }
+        }
+      }
+    },
+    '/api/bookings/statistics': {
+      get: {
+        tags: ['Bookings'],
+        summary: 'Get booking statistics',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'query',
+            name: 'type',
+            schema: { type: 'string', enum: ['user', 'owner'], default: 'user' },
+            description: 'Type of statistics (user bookings or owned property bookings)'
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'Statistics retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    message: { type: 'string' },
+                    data: { $ref: '#/components/schemas/BookingStatistics' }
+                  }
+                }
+              }
+            }
+          },
+          '401': {
+            description: 'Unauthorized'
+          },
+          '500': {
+            description: 'Internal server error'
+          }
+        }
+      }
+    },
+    '/api/bookings/{bookingId}': {
+      get: {
+        tags: ['Bookings'],
+        summary: 'Get booking by ID',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'bookingId',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Booking ID'
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'Booking retrieved successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/BookingResponse' }
+              }
+            }
+          },
+          '401': {
+            description: 'Unauthorized'
+          },
+          '403': {
+            description: 'Forbidden - Not authorized to view this booking'
+          },
+          '404': {
+            description: 'Booking not found'
+          },
+          '500': {
+            description: 'Internal server error'
+          }
+        }
+      },
+      put: {
+        tags: ['Bookings'],
+        summary: 'Update booking',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'bookingId',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Booking ID'
+          }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  status: { type: 'string', enum: ['pending', 'confirmed', 'cancelled', 'completed', 'rejected', 'expired'] },
+                  checkInDate: { type: 'string', format: 'date' },
+                  checkOutDate: { type: 'string', format: 'date' },
+                  inspectionDate: { type: 'string', format: 'date-time' },
+                  inspectionTime: { type: 'string', format: 'time' },
+                  numberOfNights: { type: 'integer', minimum: 1 },
+                  numberOfGuests: { type: 'integer', minimum: 1 },
+                  totalPrice: { type: 'number', format: 'decimal' },
+                  serviceFee: { type: 'number', format: 'decimal' },
+                  taxAmount: { type: 'number', format: 'decimal' },
+                  discountAmount: { type: 'number', format: 'decimal' },
+                  paymentStatus: { type: 'string', enum: ['pending', 'partial', 'completed', 'failed', 'refunded'] },
+                  paymentMethod: { type: 'string' },
+                  transactionId: { type: 'string' },
+                  guestName: { type: 'string' },
+                  guestPhone: { type: 'string' },
+                  guestEmail: { type: 'string', format: 'email' },
+                  specialRequests: { type: 'string' },
+                  cancellationReason: { type: 'string' },
+                  ownerNotes: { type: 'string' },
+                  adminNotes: { type: 'string' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Booking updated successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/BookingResponse' }
+              }
+            }
+          },
+          '400': {
+            description: 'Validation error or cannot update completed/cancelled booking'
+          },
+          '401': {
+            description: 'Unauthorized'
+          },
+          '403': {
+            description: 'Forbidden - Not authorized to update this booking'
+          },
+          '404': {
+            description: 'Booking not found'
+          },
+          '500': {
+            description: 'Internal server error'
+          }
+        }
+      }
+    },
+    '/api/bookings/{bookingId}/cancel': {
+      post: {
+        tags: ['Bookings'],
+        summary: 'Cancel booking',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'bookingId',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Booking ID'
+          }
+        ],
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  cancellationReason: { type: 'string', description: 'Reason for cancellation' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Booking cancelled successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/BookingResponse' }
+              }
+            }
+          },
+          '400': {
+            description: 'Booking cannot be cancelled'
+          },
+          '401': {
+            description: 'Unauthorized'
+          },
+          '403': {
+            description: 'Forbidden - Not authorized to cancel this booking'
+          },
+          '404': {
+            description: 'Booking not found'
+          },
+          '500': {
+            description: 'Internal server error'
+          }
+        }
+      }
+    },
+    '/api/bookings/{bookingId}/confirm': {
+      post: {
+        tags: ['Bookings'],
+        summary: 'Confirm booking (owner only)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'bookingId',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Booking ID'
+          }
+        ],
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  ownerNotes: { type: 'string', description: 'Owner notes about the booking' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Booking confirmed successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/BookingResponse' }
+              }
+            }
+          },
+          '400': {
+            description: 'Only pending bookings can be confirmed'
+          },
+          '401': {
+            description: 'Unauthorized'
+          },
+          '403': {
+            description: 'Only property owner can confirm bookings'
+          },
+          '404': {
+            description: 'Booking not found'
+          },
+          '500': {
+            description: 'Internal server error'
+          }
+        }
+      }
+    },
+    '/api/bookings/{bookingId}/reject': {
+      post: {
+        tags: ['Bookings'],
+        summary: 'Reject booking (owner only)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'bookingId',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Booking ID'
+          }
+        ],
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  ownerNotes: { type: 'string', description: 'Reason for rejection' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Booking rejected successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/BookingResponse' }
+              }
+            }
+          },
+          '400': {
+            description: 'Only pending bookings can be rejected'
+          },
+          '401': {
+            description: 'Unauthorized'
+          },
+          '403': {
+            description: 'Only property owner can reject bookings'
+          },
+          '404': {
+            description: 'Booking not found'
+          },
+          '500': {
+            description: 'Internal server error'
+          }
+        }
+      }
+    },
+    '/api/bookings/{bookingId}/complete': {
+      post: {
+        tags: ['Bookings'],
+        summary: 'Complete booking (owner only)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'bookingId',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Booking ID'
+          }
+        ],
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  ownerNotes: { type: 'string', description: 'Completion notes' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Booking completed successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/BookingResponse' }
+              }
+            }
+          },
+          '400': {
+            description: 'Only confirmed bookings can be completed'
+          },
+          '401': {
+            description: 'Unauthorized'
+          },
+          '403': {
+            description: 'Only property owner can complete bookings'
+          },
+          '404': {
+            description: 'Booking not found'
+          },
+          '500': {
+            description: 'Internal server error'
+          }
+        }
+      }
+    },
+    '/api/properties/{propertyId}/bookings': {
+      get: {
+        tags: ['Bookings'],
+        summary: 'Get property bookings (owner only)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'propertyId',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Property ID'
+          },
+          {
+            in: 'query',
+            name: 'page',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+            description: 'Page number'
+          },
+          {
+            in: 'query',
+            name: 'limit',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+            description: 'Number of bookings per page'
+          },
+          {
+            in: 'query',
+            name: 'status',
+            schema: { type: 'string', enum: ['pending', 'confirmed', 'cancelled', 'completed', 'rejected', 'expired'] },
+            description: 'Filter by booking status'
+          },
+          {
+            in: 'query',
+            name: 'bookingType',
+            schema: { type: 'string', enum: ['shortlet', 'rental', 'sale_inspection'] },
+            description: 'Filter by booking type'
+          },
+          {
+            in: 'query',
+            name: 'paymentStatus',
+            schema: { type: 'string', enum: ['pending', 'partial', 'completed', 'failed', 'refunded'] },
+            description: 'Filter by payment status'
+          },
+          {
+            in: 'query',
+            name: 'startDate',
+            schema: { type: 'string', format: 'date' },
+            description: 'Filter bookings from this date'
+          },
+          {
+            in: 'query',
+            name: 'endDate',
+            schema: { type: 'string', format: 'date' },
+            description: 'Filter bookings until this date'
+          },
+          {
+            in: 'query',
+            name: 'sortBy',
+            schema: { type: 'string', enum: ['createdAt', 'checkInDate', 'checkOutDate', 'totalPrice', 'status'], default: 'createdAt' },
+            description: 'Sort field'
+          },
+          {
+            in: 'query',
+            name: 'sortOrder',
+            schema: { type: 'string', enum: ['ASC', 'DESC'], default: 'DESC' },
+            description: 'Sort order'
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'Property bookings retrieved successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/BookingsResponse' }
+              }
+            }
+          },
+          '401': {
+            description: 'Unauthorized'
+          },
+          '403': {
+            description: 'Forbidden - Not authorized to view property bookings'
+          },
+          '404': {
+            description: 'Property not found'
+          },
+          '500': {
+            description: 'Internal server error'
           }
         }
       }

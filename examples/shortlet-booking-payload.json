@@ -1,0 +1,19 @@
+{
+  "propertyId": "550e8400-e29b-41d4-a716-446655440000",
+  "bookingType": "shortlet",
+  "checkInDate": "2024-02-15",
+  "checkOutDate": "2024-02-18",
+  "numberOfNights": 3,
+  "numberOfGuests": 4,
+  "basePrice": 45000.00,
+  "totalPrice": 52000.00,
+  "currency": "NGN",
+  "serviceFee": 4500.00,
+  "taxAmount": 2250.00,
+  "discountAmount": 750.00,
+  "guestName": "Adebayo Johnson",
+  "guestPhone": "+2348012345678",
+  "guestEmail": "adebayo.johnson@email.com",
+  "specialRequests": "Please ensure the house has working WiFi and air conditioning. We would also like a late checkout on the 18th if possible. We're celebrating our anniversary, so if you could arrange some flowers in the living room, that would be wonderful!"
+}
+

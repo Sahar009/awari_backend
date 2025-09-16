@@ -2,6 +2,7 @@ import User from './User.js';
 import KycDocument from './KycDocument.js';
 import Property from './Property.js';
 import PropertyMedia from './PropertyMedia.js';
+import PropertyAvailability from './PropertyAvailability.js';
 import Booking from './Booking.js';
 import Review from './Review.js';
 import Payment from './Payment.js';
@@ -39,6 +40,7 @@ const defineAssociations = () => {
   Property.belongsTo(User, { as: 'agent', foreignKey: 'agentId' });
   Property.belongsTo(User, { as: 'approver', foreignKey: 'approvedBy' });
   Property.hasMany(PropertyMedia, { as: 'media', foreignKey: 'propertyId' });
+  Property.hasMany(PropertyAvailability, { as: 'availability', foreignKey: 'propertyId' });
   Property.hasMany(Booking, { as: 'bookings', foreignKey: 'propertyId' });
   Property.hasMany(Review, { as: 'reviews', foreignKey: 'propertyId' });
   Property.hasMany(Payment, { as: 'payments', foreignKey: 'propertyId' });
@@ -46,6 +48,11 @@ const defineAssociations = () => {
 
   // Property Media associations
   PropertyMedia.belongsTo(Property, { as: 'property', foreignKey: 'propertyId' });
+
+  // Property Availability associations
+  PropertyAvailability.belongsTo(Property, { as: 'property', foreignKey: 'propertyId' });
+  PropertyAvailability.belongsTo(Booking, { as: 'booking', foreignKey: 'bookingId' });
+  PropertyAvailability.belongsTo(User, { as: 'creator', foreignKey: 'createdBy' });
 
   // Booking associations
   Booking.belongsTo(Property, { as: 'property', foreignKey: 'propertyId' });
@@ -98,6 +105,7 @@ export {
   KycDocument,
   Property,
   PropertyMedia,
+  PropertyAvailability,
   Booking,
   Review,
   Payment,
@@ -113,6 +121,7 @@ export default {
   KycDocument,
   Property,
   PropertyMedia,
+  PropertyAvailability,
   Booking,
   Review,
   Payment,

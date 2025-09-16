@@ -2,6 +2,11 @@ import Booking from '../schema/Booking.js';
 import Property from '../schema/Property.js';
 import User from '../schema/User.js';
 import { Op } from 'sequelize';
+import { 
+  blockDatesForBooking, 
+  unblockDatesForBooking, 
+  checkDateRangeAvailability 
+} from './availabilityService.js';
 
 /**
  * Create a new booking
@@ -51,8 +56,21 @@ export const createBooking = async (userId, bookingData) => {
       };
     }
 
-    // Check for conflicting bookings
+    // Check for conflicting bookings and availability
     if (bookingType === 'shortlet' || bookingType === 'rental') {
+      // Check availability using the new availability service
+      const availabilityCheck = await checkDateRangeAvailability(propertyId, checkInDate, checkOutDate);
+      
+      if (!availabilityCheck.available) {
+        return {
+          success: false,
+          message: 'Property is not available for the selected dates',
+          details: availabilityCheck.conflictingDates,
+          statusCode: 409
+        };
+      }
+
+      // Also check for existing confirmed bookings as a fallback
       const conflictingBooking = await Booking.findOne({
         where: {
           propertyId,
@@ -566,6 +584,16 @@ export const cancelBooking = async (bookingId, userId, cancellationReason = null
       cancelledAt: new Date()
     });
 
+    // Unblock dates for the cancelled booking
+    if (booking.bookingType === 'shortlet' || booking.bookingType === 'rental') {
+      try {
+        await unblockDatesForBooking(booking.propertyId, booking.id);
+      } catch (availabilityError) {
+        console.error('Error unblocking dates for cancelled booking:', availabilityError);
+        // Don't fail the booking cancellation if availability unblocking fails
+      }
+    }
+
     // Fetch updated booking with relations
     const updatedBooking = await Booking.findByPk(bookingId, {
       include: [
@@ -657,6 +685,23 @@ export const confirmBooking = async (bookingId, userId, ownerNotes = null) => {
       status: 'confirmed',
       ownerNotes
     });
+
+    // Block dates for the confirmed booking
+    if (booking.bookingType === 'shortlet' || booking.bookingType === 'rental') {
+      try {
+        await blockDatesForBooking(
+          booking.propertyId,
+          booking.id,
+          booking.checkInDate,
+          booking.checkOutDate,
+          userId
+        );
+      } catch (availabilityError) {
+        console.error('Error blocking dates for booking:', availabilityError);
+        // Don't fail the booking confirmation if availability blocking fails
+        // This ensures the booking is still confirmed even if there's an availability issue
+      }
+    }
 
     // Fetch updated booking with relations
     const updatedBooking = await Booking.findByPk(bookingId, {
