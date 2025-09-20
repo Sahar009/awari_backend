@@ -424,3 +424,4 @@ To test the system:
 3. Create a booking and confirm it (dates will be automatically blocked)
 4. Cancel the booking (dates will be automatically unblocked)
 
+

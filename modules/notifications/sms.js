@@ -92,3 +92,4 @@ export const formatPhoneNumber = (phoneNumber) => {
   
   return '+' + cleaned;
 };
+

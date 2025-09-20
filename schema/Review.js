@@ -11,7 +11,7 @@ const Review = sequelize.define('Review', {
     type: DataTypes.UUID,
     allowNull: false,
     references: {
-      model: 'users',
+      model: 'Users',
       key: 'id'
     }
   },
@@ -27,7 +27,7 @@ const Review = sequelize.define('Review', {
     type: DataTypes.UUID,
     allowNull: true,
     references: {
-      model: 'users',
+      model: 'Users',
       key: 'id'
     }
   },
@@ -125,7 +125,7 @@ const Review = sequelize.define('Review', {
     type: DataTypes.UUID,
     allowNull: true,
     references: {
-      model: 'users',
+      model: 'Users',
       key: 'id'
     }
   },

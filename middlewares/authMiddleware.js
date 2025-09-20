@@ -19,9 +19,10 @@ export const authenticateToken = async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
     
-    // Get user from database
+    // Get user from database (exclude soft-deleted users)
     const user = await User.findByPk(decoded.id, {
-      attributes: { exclude: ['passwordHash'] }
+      attributes: { exclude: ['passwordHash'] },
+      paranoid: true // This excludes soft-deleted users
     });
 
     if (!user) {
@@ -76,7 +77,8 @@ export const optionalAuth = async (req, res, next) => {
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
       const user = await User.findByPk(decoded.id, {
-        attributes: { exclude: ['passwordHash'] }
+        attributes: { exclude: ['passwordHash'] },
+        paranoid: true // This excludes soft-deleted users
       });
 
       if (user && user.status === 'active') {

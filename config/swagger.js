@@ -372,6 +372,107 @@ const specs = {
           push: { type: 'object', properties: { sent: { type: 'boolean' }, error: { type: 'string' } } },
           in_app: { type: 'object', properties: { sent: { type: 'boolean' }, error: { type: 'string' } } }
         }
+      },
+      Review: {
+        type: 'object',
+        required: ['reviewerId', 'reviewType', 'rating', 'content'],
+        properties: {
+          id: { type: 'string', format: 'uuid', description: 'Review ID' },
+          reviewerId: { type: 'string', format: 'uuid', description: 'ID of user who wrote the review' },
+          propertyId: { type: 'string', format: 'uuid', description: 'Property being reviewed' },
+          ownerId: { type: 'string', format: 'uuid', description: 'Property owner being reviewed' },
+          bookingId: { type: 'string', format: 'uuid', description: 'Booking associated with review' },
+          reviewType: { type: 'string', enum: ['property', 'owner', 'guest', 'platform'], description: 'Type of review' },
+          rating: { type: 'integer', minimum: 1, maximum: 5, description: 'Overall rating' },
+          title: { type: 'string', maxLength: 200, description: 'Review title' },
+          content: { type: 'string', minLength: 10, maxLength: 2000, description: 'Review content' },
+          status: { type: 'string', enum: ['pending', 'approved', 'rejected', 'hidden'], description: 'Review status' },
+          cleanliness: { type: 'integer', minimum: 1, maximum: 5, description: 'Cleanliness rating' },
+          communication: { type: 'integer', minimum: 1, maximum: 5, description: 'Communication rating' },
+          checkIn: { type: 'integer', minimum: 1, maximum: 5, description: 'Check-in experience rating' },
+          accuracy: { type: 'integer', minimum: 1, maximum: 5, description: 'Accuracy rating' },
+          location: { type: 'integer', minimum: 1, maximum: 5, description: 'Location rating' },
+          value: { type: 'integer', minimum: 1, maximum: 5, description: 'Value for money rating' },
+          helpfulCount: { type: 'integer', description: 'Number of helpful votes' },
+          reportCount: { type: 'integer', description: 'Number of reports' },
+          isVerified: { type: 'boolean', description: 'Whether review is verified' },
+          ownerResponse: { type: 'string', description: 'Owner\'s response to review' },
+          ownerResponseAt: { type: 'string', format: 'date-time', description: 'When owner responded' },
+          moderatedBy: { type: 'string', format: 'uuid', description: 'ID of moderator' },
+          moderatedAt: { type: 'string', format: 'date-time', description: 'Moderation date' },
+          rejectionReason: { type: 'string', description: 'Reason for rejection' },
+          ipAddress: { type: 'string', description: 'IP address of reviewer' },
+          userAgent: { type: 'string', description: 'User agent of reviewer' },
+          metadata: { type: 'object', description: 'Additional metadata' },
+          createdAt: { type: 'string', format: 'date-time', description: 'Creation timestamp' },
+          updatedAt: { type: 'string', format: 'date-time', description: 'Last update timestamp' }
+        }
+      },
+      ReviewStats: {
+        type: 'object',
+        properties: {
+          totalReviews: { type: 'integer', description: 'Total number of reviews' },
+          approvedReviews: { type: 'integer', description: 'Number of approved reviews' },
+          pendingReviews: { type: 'integer', description: 'Number of pending reviews' },
+          rejectedReviews: { type: 'integer', description: 'Number of rejected reviews' },
+          hiddenReviews: { type: 'integer', description: 'Number of hidden reviews' },
+          averageRating: { type: 'number', description: 'Average rating' },
+          ratingDistribution: { type: 'object', description: 'Distribution of ratings' },
+          categoryBreakdown: { type: 'object', description: 'Breakdown by review categories' }
+        }
+      },
+      ReviewResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', description: 'Success status' },
+          message: { type: 'string', description: 'Response message' },
+          data: { type: 'object', description: 'Response data' },
+          error: { type: 'string', description: 'Error message' }
+        }
+      },
+      ModerationRequest: {
+        type: 'object',
+        required: ['status'],
+        properties: {
+          status: { type: 'string', enum: ['approved', 'rejected', 'hidden'], description: 'Moderation status' },
+          rejectionReason: { type: 'string', description: 'Reason for rejection' }
+        }
+      },
+      OwnerResponseRequest: {
+        type: 'object',
+        required: ['response'],
+        properties: {
+          response: { type: 'string', description: 'Owner\'s response text' }
+        }
+      },
+      ReportRequest: {
+        type: 'object',
+        required: ['reason'],
+        properties: {
+          reason: { type: 'string', description: 'Reason for reporting' },
+          description: { type: 'string', description: 'Additional details' }
+        }
+      },
+      PropertyRatingSummary: {
+        type: 'object',
+        properties: {
+          propertyId: { type: 'string', format: 'uuid', description: 'Property ID' },
+          totalReviews: { type: 'integer', description: 'Total number of reviews' },
+          averageRating: { type: 'number', description: 'Average overall rating' },
+          ratingDistribution: { type: 'object', description: 'Distribution of ratings (1-5 stars)' },
+          categoryRatings: { type: 'object', description: 'Average ratings by category' },
+          recentReviews: { type: 'array', items: { $ref: '#/components/schemas/Review' }, description: 'Recent reviews' },
+          verifiedReviews: { type: 'integer', description: 'Number of verified reviews' }
+        }
+      },
+      BulkModerationRequest: {
+        type: 'object',
+        required: ['reviewIds', 'status'],
+        properties: {
+          reviewIds: { type: 'array', items: { type: 'string', format: 'uuid' }, description: 'Array of review IDs' },
+          status: { type: 'string', enum: ['approved', 'rejected', 'hidden'], description: 'Moderation status' },
+          rejectionReason: { type: 'string', description: 'Reason for rejection' }
+        }
       }
     }
   },
@@ -3770,6 +3871,292 @@ const specs = {
           },
           '401': { description: 'Unauthorized' },
           '403': { description: 'Forbidden - Cannot access other user statistics' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    // Review endpoints
+    '/api/reviews': {
+      post: {
+        tags: ['Reviews'],
+        summary: 'Create a new review',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/Review' },
+              example: {
+                propertyId: '123e4567-e89b-12d3-a456-426614174000',
+                bookingId: '123e4567-e89b-12d3-a456-426614174001',
+                reviewType: 'property',
+                rating: 5,
+                title: 'Amazing stay!',
+                content: 'Had an absolutely wonderful time. The property was clean, well-equipped, and in a great location.',
+                cleanliness: 5,
+                communication: 5,
+                checkIn: 4,
+                accuracy: 5,
+                location: 5,
+                value: 5
+              }
+            }
+          }
+        },
+        responses: {
+          '201': { description: 'Review created successfully', content: { 'application/json': { schema: { $ref: '#/components/schemas/ReviewResponse' } } } },
+          '400': { description: 'Bad request' },
+          '401': { description: 'Unauthorized' },
+          '500': { description: 'Internal server error' }
+        }
+      },
+      get: {
+        tags: ['Reviews'],
+        summary: 'Get reviews with filtering and pagination',
+        parameters: [
+          { in: 'query', name: 'page', schema: { type: 'integer', default: 1 }, description: 'Page number' },
+          { in: 'query', name: 'limit', schema: { type: 'integer', default: 20 }, description: 'Items per page' },
+          { in: 'query', name: 'propertyId', schema: { type: 'string', format: 'uuid' }, description: 'Filter by property ID' },
+          { in: 'query', name: 'ownerId', schema: { type: 'string', format: 'uuid' }, description: 'Filter by owner ID' },
+          { in: 'query', name: 'reviewerId', schema: { type: 'string', format: 'uuid' }, description: 'Filter by reviewer ID' },
+          { in: 'query', name: 'reviewType', schema: { type: 'string', enum: ['property', 'owner', 'guest', 'platform'] }, description: 'Filter by review type' },
+          { in: 'query', name: 'status', schema: { type: 'string', enum: ['pending', 'approved', 'rejected', 'hidden'] }, description: 'Filter by status' },
+          { in: 'query', name: 'rating', schema: { type: 'integer', minimum: 1, maximum: 5 }, description: 'Filter by exact rating' },
+          { in: 'query', name: 'minRating', schema: { type: 'integer', minimum: 1, maximum: 5 }, description: 'Minimum rating filter' },
+          { in: 'query', name: 'maxRating', schema: { type: 'integer', minimum: 1, maximum: 5 }, description: 'Maximum rating filter' },
+          { in: 'query', name: 'search', schema: { type: 'string' }, description: 'Search in title and content' },
+          { in: 'query', name: 'sortBy', schema: { type: 'string', default: 'createdAt' }, description: 'Sort field' },
+          { in: 'query', name: 'sortOrder', schema: { type: 'string', enum: ['ASC', 'DESC'], default: 'DESC' }, description: 'Sort order' }
+        ],
+        responses: {
+          '200': { description: 'Reviews retrieved successfully' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/reviews/{reviewId}': {
+      get: {
+        tags: ['Reviews'],
+        summary: 'Get review by ID',
+        parameters: [{ in: 'path', name: 'reviewId', required: true, schema: { type: 'string', format: 'uuid' }, description: 'Review ID' }],
+        responses: {
+          '200': { description: 'Review retrieved successfully' },
+          '404': { description: 'Review not found' },
+          '500': { description: 'Internal server error' }
+        }
+      },
+      put: {
+        tags: ['Reviews'],
+        summary: 'Update review',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ in: 'path', name: 'reviewId', required: true, schema: { type: 'string', format: 'uuid' }, description: 'Review ID' }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  rating: { type: 'integer', minimum: 1, maximum: 5 },
+                  title: { type: 'string', maxLength: 200 },
+                  content: { type: 'string', minLength: 10, maxLength: 2000 },
+                  cleanliness: { type: 'integer', minimum: 1, maximum: 5 },
+                  communication: { type: 'integer', minimum: 1, maximum: 5 },
+                  checkIn: { type: 'integer', minimum: 1, maximum: 5 },
+                  accuracy: { type: 'integer', minimum: 1, maximum: 5 },
+                  location: { type: 'integer', minimum: 1, maximum: 5 },
+                  value: { type: 'integer', minimum: 1, maximum: 5 }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': { description: 'Review updated successfully' },
+          '400': { description: 'Bad request' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Forbidden' },
+          '404': { description: 'Review not found' },
+          '500': { description: 'Internal server error' }
+        }
+      },
+      delete: {
+        tags: ['Reviews'],
+        summary: 'Delete review',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ in: 'path', name: 'reviewId', required: true, schema: { type: 'string', format: 'uuid' }, description: 'Review ID' }],
+        responses: {
+          '200': { description: 'Review deleted successfully' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Forbidden' },
+          '404': { description: 'Review not found' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/reviews/{reviewId}/moderate': {
+      patch: {
+        tags: ['Reviews'],
+        summary: 'Moderate review (admin/moderator only)',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ in: 'path', name: 'reviewId', required: true, schema: { type: 'string', format: 'uuid' }, description: 'Review ID' }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ModerationRequest' }
+            }
+          }
+        },
+        responses: {
+          '200': { description: 'Review moderated successfully' },
+          '400': { description: 'Bad request' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Forbidden' },
+          '404': { description: 'Review not found' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/reviews/{reviewId}/response': {
+      post: {
+        tags: ['Reviews'],
+        summary: 'Add owner response to review',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ in: 'path', name: 'reviewId', required: true, schema: { type: 'string', format: 'uuid' }, description: 'Review ID' }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/OwnerResponseRequest' }
+            }
+          }
+        },
+        responses: {
+          '200': { description: 'Response added successfully' },
+          '400': { description: 'Bad request' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Forbidden' },
+          '404': { description: 'Review not found' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/reviews/{reviewId}/helpful': {
+      post: {
+        tags: ['Reviews'],
+        summary: 'Mark review as helpful',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ in: 'path', name: 'reviewId', required: true, schema: { type: 'string', format: 'uuid' }, description: 'Review ID' }],
+        responses: {
+          '200': { description: 'Review marked as helpful' },
+          '404': { description: 'Review not found' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/reviews/{reviewId}/report': {
+      post: {
+        tags: ['Reviews'],
+        summary: 'Report review',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ in: 'path', name: 'reviewId', required: true, schema: { type: 'string', format: 'uuid' }, description: 'Review ID' }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ReportRequest' }
+            }
+          }
+        },
+        responses: {
+          '200': { description: 'Review reported successfully' },
+          '404': { description: 'Review not found' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/reviews/stats': {
+      get: {
+        tags: ['Reviews'],
+        summary: 'Get review statistics',
+        parameters: [
+          { in: 'query', name: 'propertyId', schema: { type: 'string', format: 'uuid' }, description: 'Filter by property ID' },
+          { in: 'query', name: 'ownerId', schema: { type: 'string', format: 'uuid' }, description: 'Filter by owner ID' },
+          { in: 'query', name: 'reviewType', schema: { type: 'string', enum: ['property', 'owner', 'guest', 'platform'] }, description: 'Filter by review type' }
+        ],
+        responses: {
+          '200': { description: 'Statistics retrieved successfully' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/reviews/property/{propertyId}/summary': {
+      get: {
+        tags: ['Reviews'],
+        summary: 'Get property rating summary',
+        parameters: [{ in: 'path', name: 'propertyId', required: true, schema: { type: 'string', format: 'uuid' }, description: 'Property ID' }],
+        responses: {
+          '200': { description: 'Property summary retrieved successfully' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/reviews/user/{userId}': {
+      get: {
+        tags: ['Reviews'],
+        summary: 'Get user\'s review history',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { in: 'path', name: 'userId', required: true, schema: { type: 'string', format: 'uuid' }, description: 'User ID' },
+          { in: 'query', name: 'page', schema: { type: 'integer', default: 1 }, description: 'Page number' },
+          { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 }, description: 'Items per page' },
+          { in: 'query', name: 'status', schema: { type: 'string', enum: ['pending', 'approved', 'rejected', 'hidden'] }, description: 'Filter by status' }
+        ],
+        responses: {
+          '200': { description: 'User reviews retrieved successfully' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Forbidden' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/reviews/pending': {
+      get: {
+        tags: ['Reviews'],
+        summary: 'Get reviews pending moderation (admin/moderator only)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { in: 'query', name: 'page', schema: { type: 'integer', default: 1 }, description: 'Page number' },
+          { in: 'query', name: 'limit', schema: { type: 'integer', default: 20 }, description: 'Items per page' },
+          { in: 'query', name: 'reviewType', schema: { type: 'string', enum: ['property', 'owner', 'guest', 'platform'] }, description: 'Filter by review type' }
+        ],
+        responses: {
+          '200': { description: 'Pending reviews retrieved successfully' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Forbidden' },
+          '500': { description: 'Internal server error' }
+        }
+      }
+    },
+    '/api/reviews/bulk/moderate': {
+      patch: {
+        tags: ['Reviews'],
+        summary: 'Bulk moderate reviews (admin/moderator only)',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/BulkModerationRequest' }
+            }
+          }
+        },
+        responses: {
+          '200': { description: 'Reviews moderated successfully' },
+          '400': { description: 'Bad request' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Forbidden' },
           '500': { description: 'Internal server error' }
         }
       }

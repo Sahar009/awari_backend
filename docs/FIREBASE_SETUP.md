@@ -164,3 +164,4 @@ If you encounter issues:
 2. Review the [Firebase Admin SDK Documentation](https://firebase.google.com/docs/admin/setup)
 3. Check the application logs for specific error messages
 4. Verify all environment variables are correctly set
+
