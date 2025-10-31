@@ -1,6 +1,9 @@
 import { BAD_REQUEST, SUCCESS } from "../../constants/statusCode.js";
 import { messageHandler } from "../../utils/index.js";
 import axios from 'axios';
+import { Payment, Booking } from "../../schema/index.js";
+
+const PAYSTACK_DECIMAL_FACTOR = 100;
 
 
 
@@ -68,12 +71,108 @@ class PaystackService {
         );
     }
 
+    mapChannelToPaymentMethod(channel) {
+        if (!channel) return 'paystack';
+        const normalized = channel.toLowerCase();
+        if (normalized.includes('card')) {
+            return 'card';
+        }
+        if (normalized.includes('bank')) {
+            return 'bank_transfer';
+        }
+        return 'paystack';
+    }
+
+    normalizeAmount(amount) {
+        if (amount === undefined || amount === null) {
+            throw new Error('Amount is required for Paystack operations');
+        }
+
+        const numericAmount = Number(amount);
+
+        if (Number.isNaN(numericAmount) || numericAmount <= 0) {
+            throw new Error('Amount must be a positive number');
+        }
+
+        return Math.round(numericAmount * PAYSTACK_DECIMAL_FACTOR);
+    }
+
     async initializeTransaction(data, callback) {
-            //implement
+        try {
+            if (!data?.email) {
+                throw new Error('Customer email is required for transaction initialization');
+            }
+
+            const payload = {
+                email: data.email,
+                amount: this.normalizeAmount(data.amount),
+                currency: data.currency || 'NGN',
+                callback_url: data.callbackUrl,
+                reference: data.reference,
+                metadata: data.metadata,
+                channels: data.channels,
+                split_code: data.splitCode,
+                subaccount: data.subaccount,
+                bearer: data.bearer,
+                invoice_limit: data.invoiceLimit
+            };
+
+            Object.keys(payload).forEach((key) => {
+                if (payload[key] === undefined || payload[key] === null) {
+                    delete payload[key];
+                }
+            });
+
+            const response = await this.api.post('/transaction/initialize', payload);
+
+            return callback(
+                messageHandler(
+                    "Transaction initialized successfully",
+                    true,
+                    SUCCESS,
+                    response.data.data
+                )
+            );
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to initialize transaction';
+            return callback(
+                messageHandler(
+                    message,
+                    false,
+                    BAD_REQUEST,
+                    error.response?.data
+                )
+            );
+        }
 
     }
     async verifyTransaction(reference, callback) {
-      //implement
+        try {
+            if (!reference) {
+                throw new Error('Transaction reference is required for verification');
+            }
+
+            const response = await this.api.get(`/transaction/verify/${reference}`);
+
+            return callback(
+                messageHandler(
+                    "Transaction verified successfully",
+                    true,
+                    SUCCESS,
+                    response.data.data
+                )
+            );
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to verify transaction';
+            return callback(
+                messageHandler(
+                    message,
+                    false,
+                    BAD_REQUEST,
+                    error.response?.data
+                )
+            );
+        }
     }
 
     async createTransferRecipient(data, callback) {
@@ -89,13 +188,65 @@ class PaystackService {
             const response = await this.api.post('/transferrecipient', payload);
             return callback(messageHandler("Transfer recipient created successfully", true, SUCCESS, response.data.data));
         } catch (error) {
+            const duplicateData = error.response?.data?.data;
+            if (error.response?.data?.message?.toLowerCase().includes('duplicate account') && duplicateData) {
+                return callback(
+                    messageHandler(
+                        "Transfer recipient already exists",
+                        true,
+                        SUCCESS,
+                        duplicateData
+                    )
+                );
+            }
             console.error("Error creating transfer recipient:", error.response?.data || error.message);
             return callback(messageHandler("Failed to create transfer recipient", false, BAD_REQUEST));
         }
     }
 
     async initiateTransfer(data, callback) {
-             //implement
+        try {
+            if (!data?.recipient) {
+                throw new Error('Transfer recipient code is required');
+            }
+
+            const payload = {
+                source: data.source || 'balance',
+                amount: this.normalizeAmount(data.amount),
+                recipient: data.recipient,
+                reason: data.reason,
+                currency: data.currency || 'NGN',
+                reference: data.reference,
+                metadata: data.metadata
+            };
+
+            Object.keys(payload).forEach((key) => {
+                if (payload[key] === undefined || payload[key] === null) {
+                    delete payload[key];
+                }
+            });
+
+            const response = await this.api.post('/transfer', payload);
+
+            return callback(
+                messageHandler(
+                    "Transfer initiated successfully",
+                    true,
+                    SUCCESS,
+                    response.data.data
+                )
+            );
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to initiate transfer';
+            return callback(
+                messageHandler(
+                    message,
+                    false,
+                    BAD_REQUEST,
+                    error.response?.data
+                )
+            );
+        }
 
     }
 
@@ -148,7 +299,17 @@ class PaystackService {
                     await this.handleSuccessfulPayment(data);
                     break;
                 case 'charge.failed':
+                case 'charge.abandoned':
                     await this.handleFailedPayment(data);
+                    break;
+                case 'transfer.success':
+                    await this.handleSuccessfulTransfer(data);
+                    break;
+                case 'transfer.failed':
+                    await this.handleFailedTransfer(data);
+                    break;
+                case 'transfer.reversed':
+                    await this.handleReversedTransfer(data);
                     break;
                 default:
                     console.log('Unhandled webhook event:', event);
@@ -162,32 +323,200 @@ class PaystackService {
     }
 
     async handleSuccessfulPayment(data) {
-             //implement
+        try {
+            const reference = data?.reference;
+
+            if (!reference) {
+                throw new Error('Payment reference not provided');
+            }
+
+            const payment = await Payment.findOne({ where: { reference } });
+
+            if (!payment) {
+                console.warn(`Payment record not found for reference ${reference}`);
+                return;
+            }
+
+            const booking = payment.bookingId ? await Booking.findByPk(payment.bookingId) : null;
+            const amountMajor = data?.amount ? (Number(data.amount) / PAYSTACK_DECIMAL_FACTOR).toFixed(2) : payment.amount;
+            const paymentMethod = this.mapChannelToPaymentMethod(data?.channel);
+
+            await payment.update({
+                status: 'completed',
+                amount: amountMajor,
+                currency: data?.currency || payment.currency,
+                paymentMethod,
+                transactionId: data?.id?.toString() || reference,
+                gateway: 'paystack',
+                gatewayResponse: data,
+                failureReason: null,
+                payoutStatus: payment.paymentType === 'payout' ? 'completed' : payment.payoutStatus
+            });
+
+            if (booking) {
+                await booking.update({
+                    paymentStatus: 'completed',
+                    paymentMethod,
+                    transactionId: reference,
+                    status: booking.bookingType === 'shortlet' && booking.status === 'pending' ? 'confirmed' : booking.status
+                });
+            }
+        } catch (error) {
+            console.error('Error handling successful payment:', error);
+        }
 
     }
 
     async handleFailedPayment(data) {
-             //implement
+        try {
+            const reference = data?.reference;
+
+            if (!reference) {
+                throw new Error('Payment reference not provided');
+            }
+
+            const payment = await Payment.findOne({ where: { reference } });
+
+            if (!payment) {
+                console.warn(`Payment record not found for failed reference ${reference}`);
+                return;
+            }
+
+            const booking = payment.bookingId ? await Booking.findByPk(payment.bookingId) : null;
+
+            await payment.update({
+                status: 'failed',
+                failureReason: data?.gateway_response || data?.message || 'Payment failed',
+                gatewayResponse: data,
+                paymentMethod: this.mapChannelToPaymentMethod(data?.channel) || payment.paymentMethod,
+                payoutStatus: payment.paymentType === 'payout' ? 'failed' : payment.payoutStatus
+            });
+
+            if (booking) {
+                await booking.update({
+                    paymentStatus: 'failed'
+                });
+            }
+        } catch (error) {
+            console.error('Error handling failed payment:', error);
+        }
 
     }
 
     async handleSuccessfulTransfer(data) {
-             //implement
+        try {
+            const reference = data?.reference || data?.transfer_code;
+
+            if (!reference) {
+                throw new Error('Transfer reference not provided');
+            }
+
+            const payment = await Payment.findOne({ where: { reference } });
+
+            if (!payment) {
+                console.warn(`Payout record not found for transfer reference ${reference}`);
+                return;
+            }
+
+            await payment.update({
+                status: 'completed',
+                payoutStatus: 'completed',
+                transactionId: data?.transfer_code || payment.transactionId,
+                gateway: 'paystack',
+                gatewayResponse: data,
+                failureReason: null
+            });
+        } catch (error) {
+            console.error('Error handling successful transfer:', error);
+        }
 
     }
 
     async handleFailedTransfer(data) {
-             //implement
+        try {
+            const reference = data?.reference || data?.transfer_code;
+
+            if (!reference) {
+                throw new Error('Transfer reference not provided');
+            }
+
+            const payment = await Payment.findOne({ where: { reference } });
+
+            if (!payment) {
+                console.warn(`Payout record not found for failed transfer reference ${reference}`);
+                return;
+            }
+
+            await payment.update({
+                status: 'failed',
+                payoutStatus: 'failed',
+                failureReason: data?.reason || data?.gateway_response || 'Transfer failed',
+                gatewayResponse: data
+            });
+        } catch (error) {
+            console.error('Error handling failed transfer:', error);
+        }
 
     }
 
     async handleReversedTransfer(data) {
-             //implement
+        try {
+            const reference = data?.reference || data?.transfer_code;
+
+            if (!reference) {
+                throw new Error('Transfer reference not provided');
+            }
+
+            const payment = await Payment.findOne({ where: { reference } });
+
+            if (!payment) {
+                console.warn(`Payout record not found for reversed transfer reference ${reference}`);
+                return;
+            }
+
+            await payment.update({
+                status: 'refunded',
+                payoutStatus: 'failed',
+                failureReason: 'Transfer reversed by payment gateway',
+                gatewayResponse: data
+            });
+        } catch (error) {
+            console.error('Error handling reversed transfer:', error);
+        }
 
     }
 
     async createDedicatedVirtualAccount(userData, callback) {
-             //implement
+        try {
+            const payload = {
+                customer: userData.customerCode,
+                preferred_bank: userData.preferredBank,
+                subaccount: userData.subaccount,
+                split_code: userData.splitCode,
+                first_name: userData.firstName,
+                last_name: userData.lastName,
+                phone: userData.phone,
+                email: userData.email,
+                country: userData.country || 'NG'
+            };
+
+            Object.keys(payload).forEach((key) => {
+                if (payload[key] === undefined || payload[key] === null) {
+                    delete payload[key];
+                }
+            });
+
+            if (!payload.customer) {
+                throw new Error('Paystack customer code is required to create a dedicated account');
+            }
+
+            const response = await this.api.post('/dedicated_account', payload);
+
+            return callback(messageHandler("Dedicated account created successfully", true, SUCCESS, response.data.data));
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to create dedicated account';
+            return callback(messageHandler(message, false, BAD_REQUEST, error.response?.data));
+        }
 
     }
 
@@ -204,10 +533,6 @@ class PaystackService {
     async deactivateDedicatedAccount(accountId, callback) {
         try {
             const response = await this.api.delete(`/dedicated_account/${accountId}`);
-            await Wallet.update(
-                { isActive: false },
-                { where: { paystackDedicatedAccountId: accountId } }
-            );
             return callback(messageHandler("Account deactivated", true, SUCCESS, response.data.data));
         } catch (error) {
             console.error("Deactivation error:", error.response?.data || error.message);

@@ -270,6 +270,9 @@ awari_backend/
 - **JWT_*** - JWT configuration
 - **GOOGLE_*** - Google OAuth2 settings
 - **SMTP_*** - Email server configuration
+- **PAYSTACK_PUBLIC_KEY** - Paystack public key
+- **PAYSTACK_SECRET_KEY** - Paystack secret key (used for server-side requests and webhook validation)
+- **PAYSTACK_WEBHOOK_SECRET** - Optional Paystack webhook signing secret (falls back to secret key if not provided)
 
 ### Database Configuration
 The platform supports MySQL with the following features:
