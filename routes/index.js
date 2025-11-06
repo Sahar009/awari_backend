@@ -9,6 +9,7 @@ import availabilityRoutes from './availabilityRoutes.js';
 import notificationRoutes from './notificationRoutes.js';
 import reviewRoutes from './reviewRoutes.js';
 import paymentRoutes from './paymentRoutes.js';
+import messageRoutes from './messageRoutes.js';
 import { sendEmail } from '../modules/notifications/email.js';
 
 const router = (app) => {
@@ -23,6 +24,7 @@ const router = (app) => {
   app.use('/api/notifications', notificationRoutes);
   app.use('/api/reviews', reviewRoutes);
   app.use('/api/payments', paymentRoutes);
+  app.use('/api/messages', messageRoutes);
 
   // Test email route
   app.get(`/api/test-email`, async (req, res) => {

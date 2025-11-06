@@ -1,4 +1,5 @@
 import express from 'express';
+import http from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -7,8 +8,10 @@ import router from './routes/index.js';
 import { connectToDB } from './database/db.js';
 import { config } from './config/config.js';
 import { initializeFirebase } from './config/firebase.js';
+import websocketService from './services/websocketService.js';
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 8000; // Changed to match your current port
 
 app.use(helmet());
@@ -119,11 +122,15 @@ const startServer = async () => {
       console.log('⚠️  Firebase Admin SDK not configured - Google Sign-In will not work');
     }
 
+    // Initialize WebSocket server
+    websocketService.initialize(server);
+
     // Start server
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
       console.log(`🏥 Health Check: http://localhost:${PORT}/api/health`);
+      console.log(`💬 WebSocket server ready for real-time messaging`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     });
   } catch (error) {

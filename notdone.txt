@@ -1,0 +1,88 @@
+❌ What's Missing
+Backend:
+Messaging system
+❌ Message routes (/api/messages)
+❌ Message controller & service
+❌ Chat between users/landlords
+Subscription management
+❌ Subscription routes (/api/subscriptions)
+❌ Subscription controller & service
+❌ Subscription plans management
+❌ Subscription payment processing
+Admin dashboard APIs
+❌ User management routes (approve/ban/suspend)
+❌ Admin dashboard statistics/overview
+❌ Content management (FAQs, banners, announcements)
+❌ Dispute management
+❌ Reported listings management
+Landlord/Agent dashboard APIs
+❌ Earnings tracking endpoint
+❌ Payment logs for landlords
+❌ Inspection calendar management (separate from availability)
+Hotel provider dashboard APIs
+❌ Hotel-specific dashboard endpoints
+❌ Room/apartment management
+❌ Pricing/discount management
+User dashboard APIs
+❌ "My Rentals" applications view
+❌ "My Purchases" viewed properties
+❌ Inspection calendar view for users
+❌ Payment statements
+Integrations
+❌ Google Calendar integration
+❌ FullCalendar integration
+❌ Meilisearch/ElasticSearch (Redis exists but search not implemented)
+❌ SMS notifications (Twilio)
+❌ Google Analytics integration
+❌ Sentry error tracking
+❌ PostHog analytics
+Frontend:
+User dashboard pages
+❌ "My Rentals" page (applications, inspection calendar, payment statements)
+❌ "My Purchases" page (viewed properties, inspections, schedule visits)
+❌ "My Shortlet Bookings" page (current bookings, history, payment status)
+Landlord/Agent dashboard
+❌ Landlord dashboard layout
+❌ Subscription management page
+❌ Inspection calendar page (visual calendar view)
+❌ Booking requests management page
+❌ Messaging/chat interface
+❌ Earnings & payment logs page
+Hotel provider dashboard
+❌ Hotel provider dashboard layout
+❌ Room/apartment management page
+❌ Availability calendar with pricing/discounts
+❌ Hotel bookings management
+❌ Hotel reviews & ratings view
+Admin dashboard
+❌ Admin dashboard layout (separate from /admin folder which is empty)
+❌ Dashboard overview (stats, charts)
+❌ User management page (approve/ban/suspend)
+❌ Property moderation page
+❌ Transactions management page
+❌ Subscriptions & pricing plans management
+❌ Reviews/Reports moderation page
+❌ Content management (FAQs, banners, announcements)
+❌ Dispute management page
+Features
+❌ Inspection scheduling calendar UI
+❌ Messaging/chat UI component
+❌ Google Calendar integration UI
+❌ Advanced search with filters (partially exists but needs enhancement)
+📋 Priority Implementation Order
+High priority:
+Messaging system (backend + frontend)
+Subscription management (backend + frontend)
+Admin dashboard (full implementation)
+Landlord dashboard (earnings, payment logs)
+User dashboard pages (Rentals, Purchases, Shortlet Bookings)
+Medium priority:
+Hotel provider dashboard
+Inspection calendar UI (FullCalendar integration)
+Google Calendar sync
+Advanced search with Meilisearch
+Low priority:
+Analytics integrations (Google Analytics, Sentry, PostHog)
+SMS notifications (Twilio)
+Content management system for admins
+The core platform is functional, but role-based dashboards and messaging need to be built to match the brief.
