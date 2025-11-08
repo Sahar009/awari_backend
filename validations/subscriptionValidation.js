@@ -1,83 +1,65 @@
 import { body, param, query } from 'express-validator';
 
-/**
- * Predefined subscription plans
- */
-export const SUBSCRIPTION_PLANS = {
-  basic: {
-    planName: 'Basic Plan',
-    planType: 'basic',
-    monthlyPrice: 5000,
-    yearlyPrice: 50000,
-    maxProperties: 5,
-    maxPhotosPerProperty: 10,
-    featuredProperties: 0,
-    prioritySupport: false,
-    analyticsAccess: false,
-    features: ['Basic listing', 'Email support', '5 properties max']
-  },
-  premium: {
-    planName: 'Premium Plan',
-    planType: 'premium',
-    monthlyPrice: 15000,
-    yearlyPrice: 150000,
-    maxProperties: 20,
-    maxPhotosPerProperty: 25,
-    featuredProperties: 3,
-    prioritySupport: true,
-    analyticsAccess: true,
-    features: ['Unlimited listings', 'Priority support', 'Analytics', '3 featured properties', 'Advanced tools']
-  },
-  enterprise: {
-    planName: 'Enterprise Plan',
-    planType: 'enterprise',
-    monthlyPrice: 50000,
-    yearlyPrice: 500000,
-    maxProperties: -1, // Unlimited
-    maxPhotosPerProperty: 50,
-    featuredProperties: -1, // Unlimited
-    prioritySupport: true,
-    analyticsAccess: true,
-    features: ['Unlimited everything', 'Dedicated support', 'Advanced analytics', 'Custom features', 'API access']
-  }
-};
+const SUPPORTED_PLAN_TYPES = ['basic', 'premium', 'enterprise', 'custom', 'other'];
+const SUPPORTED_BILLING_CYCLES = ['monthly', 'yearly', 'custom'];
 
 /**
  * Validation rules for creating a subscription
  */
 export const createSubscriptionValidation = [
+  body('planId')
+    .optional()
+    .isUUID()
+    .withMessage('planId must be a valid UUID'),
+
+  body('planSlug')
+    .optional()
+    .isString()
+    .isLength({ min: 2, max: 150 })
+    .withMessage('planSlug must be a valid string'),
+
   body('planType')
-    .isIn(['basic', 'premium', 'enterprise', 'custom'])
-    .withMessage('Plan type must be one of: basic, premium, enterprise, custom'),
-  
+    .optional()
+    .isIn(SUPPORTED_PLAN_TYPES)
+    .withMessage(`planType must be one of: ${SUPPORTED_PLAN_TYPES.join(', ')}`),
+
   body('billingCycle')
-    .isIn(['monthly', 'yearly', 'custom'])
-    .withMessage('Billing cycle must be one of: monthly, yearly, custom'),
-  
+    .notEmpty()
+    .withMessage('billingCycle is required')
+    .isIn(SUPPORTED_BILLING_CYCLES)
+    .withMessage(`billingCycle must be one of: ${SUPPORTED_BILLING_CYCLES.join(', ')}`),
+
   body('autoRenew')
     .optional()
     .isBoolean()
-    .withMessage('Auto renew must be a boolean'),
-  
+    .withMessage('autoRenew must be a boolean'),
+
   body('customPlan')
     .optional()
     .isObject()
-    .withMessage('Custom plan must be an object'),
-  
+    .withMessage('customPlan must be an object'),
+
   body('customPlan.planName')
-    .if(body('planType').equals('custom'))
+    .if((value, { req }) => req.body.planType === 'custom')
     .notEmpty()
-    .withMessage('Plan name is required for custom plans'),
-  
+    .withMessage('customPlan.planName is required when planType is custom'),
+
   body('customPlan.monthlyPrice')
-    .if(body('planType').equals('custom'))
+    .if((value, { req }) => req.body.planType === 'custom')
     .isFloat({ min: 0 })
-    .withMessage('Monthly price must be a positive number'),
-  
+    .withMessage('customPlan.monthlyPrice must be a positive number'),
+
   body('customPlan.maxProperties')
-    .if(body('planType').equals('custom'))
+    .if((value, { req }) => req.body.planType === 'custom')
     .isInt({ min: 1 })
-    .withMessage('Max properties must be a positive integer')
+    .withMessage('customPlan.maxProperties must be a positive integer'),
+
+  body().custom((value, { req }) => {
+    if (!req.body.planId && !req.body.planSlug && !req.body.planType) {
+      throw new Error('Select a subscription plan before proceeding');
+    }
+    return true;
+  })
 ];
 
 /**
@@ -163,7 +145,7 @@ export const getSubscriptionsValidation = [
   
   query('planType')
     .optional()
-    .isIn(['basic', 'premium', 'enterprise', 'custom'])
+    .isIn(SUPPORTED_PLAN_TYPES)
     .withMessage('Invalid plan type filter'),
   
   query('userId')

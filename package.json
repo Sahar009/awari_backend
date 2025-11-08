@@ -8,11 +8,12 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "test": "jest",
-    "migrate": "sequelize-cli db:migrate",
-    "migrate:undo": "sequelize-cli db:migrate:undo",
-    "seed": "sequelize-cli db:seed:all",
-    "seed:undo": "sequelize-cli db:seed:undo:all",
-    "create-tables": "node scripts/create-tables.js"
+    "migrate": "sequelize-cli db:migrate --config config/config.cli.cjs",
+    "migrate:undo": "sequelize-cli db:migrate:undo --config config/config.cli.cjs",
+    "seed": "sequelize-cli db:seed:all --config config/config.cli.cjs",
+    "seed:undo": "sequelize-cli db:seed:undo:all --config config/config.cli.cjs",
+    "create-tables": "node scripts/create-tables.js",
+    "create-admin": "node scripts/createAdminUser.js"
   },
   "keywords": [
     "real-estate",

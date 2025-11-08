@@ -10,6 +10,11 @@ import notificationRoutes from './notificationRoutes.js';
 import reviewRoutes from './reviewRoutes.js';
 import paymentRoutes from './paymentRoutes.js';
 import messageRoutes from './messageRoutes.js';
+import subscriptionRoutes from './subscriptionRoutes.js';
+import userDashboardRoutes from './userDashboardRoutes.js';
+import landlordDashboardRoutes from './landlordDashboardRoutes.js';
+import hotelDashboardRoutes from './hotelDashboardRoutes.js';
+import adminDashboardRoutes from './adminDashboardRoutes.js';
 import { sendEmail } from '../modules/notifications/email.js';
 
 const router = (app) => {
@@ -25,6 +30,11 @@ const router = (app) => {
   app.use('/api/reviews', reviewRoutes);
   app.use('/api/payments', paymentRoutes);
   app.use('/api/messages', messageRoutes);
+  app.use('/api/subscriptions', subscriptionRoutes);
+  app.use('/api/user-dashboard', userDashboardRoutes);
+  app.use('/api/landlord/dashboard', landlordDashboardRoutes);
+  app.use('/api/hotel/dashboard', hotelDashboardRoutes);
+  app.use('/api/admin/dashboard', adminDashboardRoutes);
 
   // Test email route
   app.get(`/api/test-email`, async (req, res) => {

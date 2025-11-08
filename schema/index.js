@@ -9,6 +9,7 @@ import Payment from './Payment.js';
 import Message from './Message.js';
 import Notification from './Notification.js';
 import Subscription from './Subscription.js';
+import SubscriptionPlan from './SubscriptionPlan.js';
 import NewsletterSubscription from './NewsletterSubscription.js';
 import Favorite from './Favorite.js';
 
@@ -91,6 +92,12 @@ const defineAssociations = () => {
 
   // Subscription associations
   Subscription.belongsTo(User, { as: 'user', foreignKey: 'userId' });
+  Subscription.belongsTo(SubscriptionPlan, { as: 'plan', foreignKey: 'planId' });
+  // Note: Payment.propertyId is used to store subscriptionId for subscription payments
+
+  SubscriptionPlan.hasMany(Subscription, { as: 'subscriptions', foreignKey: 'planId' });
+  SubscriptionPlan.belongsTo(User, { as: 'creator', foreignKey: 'createdBy' });
+  SubscriptionPlan.belongsTo(User, { as: 'updater', foreignKey: 'updatedBy' });
 
   // Favorite associations
   Favorite.belongsTo(User, { as: 'user', foreignKey: 'userId' });
@@ -112,6 +119,7 @@ export {
   Message,
   Notification,
   Subscription,
+  SubscriptionPlan,
   NewsletterSubscription,
   Favorite
 };
@@ -128,6 +136,7 @@ export default {
   Message,
   Notification,
   Subscription,
+  SubscriptionPlan,
   NewsletterSubscription,
   Favorite
 };

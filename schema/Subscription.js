@@ -15,12 +15,20 @@ const Subscription = sequelize.define('Subscription', {
       key: 'id'
     }
   },
+  planId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'subscription_plans',
+      key: 'id'
+    }
+  },
   planName: {
     type: DataTypes.STRING(100),
     allowNull: false
   },
   planType: {
-    type: DataTypes.ENUM('basic', 'premium', 'enterprise', 'custom'),
+    type: DataTypes.ENUM('basic', 'premium', 'enterprise', 'custom', 'other'),
     defaultValue: 'basic',
     allowNull: false
   },

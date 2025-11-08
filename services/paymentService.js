@@ -360,4 +360,105 @@ export const verifyBankAccount = async (payload) => {
   }
 };
 
+/**
+ * Initialize subscription payment
+ * @param {Object} currentUser - Current user
+ * @param {string} subscriptionId - Subscription ID
+ * @param {Object} payload - Payment payload
+ * @returns {Object} Payment initialization result
+ */
+export const initializeSubscriptionPayment = async (currentUser, subscriptionId, payload = {}) => {
+  try {
+    const { Subscription } = await import('../schema/index.js');
+    
+    const subscription = await Subscription.findByPk(subscriptionId, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'email', 'firstName', 'lastName', 'phone']
+        }
+      ]
+    });
+
+    if (!subscription) {
+      return messageHandler('Subscription not found', false, NOT_FOUND);
+    }
+
+    if (currentUser.role !== 'admin' && subscription.userId !== currentUser.id) {
+      return messageHandler('You are not authorized to pay for this subscription', false, FORBIDDEN);
+    }
+
+    if (subscription.status === 'active') {
+      return messageHandler('Subscription is already active', false, CONFLICT);
+    }
+
+    const amount = normalizeAmount(payload.amount || (subscription.billingCycle === 'yearly' ? subscription.yearlyPrice : subscription.monthlyPrice));
+    const currency = payload.currency || subscription.currency || 'NGN';
+    const customerEmail = payload.email || subscription.user?.email || currentUser.email;
+
+    if (!customerEmail) {
+      return messageHandler('Customer email is required to initialize payment', false, BAD_REQUEST);
+    }
+
+    const reference = payload.reference || generateReference('SUB');
+
+    const metadata = {
+      subscriptionId,
+      userId: subscription.userId,
+      planType: subscription.planType,
+      planName: subscription.planName,
+      billingCycle: subscription.billingCycle,
+      initiatedBy: currentUser.id,
+      source: 'awari-backend'
+    };
+
+    const paystackResult = await paystackService.initializeTransaction(
+      {
+        email: customerEmail,
+        amount,
+        currency,
+        callbackUrl: payload.callbackUrl,
+        reference,
+        metadata,
+        channels: payload.channels
+      },
+      (response) => response
+    );
+
+    if (!paystackResult.success) {
+      return paystackResult;
+    }
+
+    // Create payment record
+    const paymentRecord = await Payment.create({
+      userId: subscription.userId,
+      propertyId: subscriptionId, // Using propertyId field to store subscriptionId
+      amount,
+      currency,
+      status: 'pending',
+      paymentType: 'subscription',
+      paymentMethod: 'paystack',
+      gateway: 'paystack',
+      reference,
+      transactionId: paystackResult.data?.transaction?.reference || reference,
+      gatewayResponse: paystackResult.data,
+      description: `Subscription payment for ${subscription.planName}`,
+      metadata
+    });
+
+    return messageHandler('Payment initialized successfully', true, SUCCESS, {
+      payment: paymentRecord,
+      authorizationUrl: paystackResult.data?.authorization_url,
+      accessCode: paystackResult.data?.access_code,
+      reference
+    });
+  } catch (error) {
+    console.error('Initialize subscription payment error:', error);
+    return messageHandler('Failed to initialize subscription payment', false, INTERNAL_SERVER_ERROR, {
+      error: error.message
+    });
+  }
+};
+
 

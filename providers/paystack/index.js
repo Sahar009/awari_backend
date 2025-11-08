@@ -361,6 +361,17 @@ class PaystackService {
                     status: booking.bookingType === 'shortlet' && booking.status === 'pending' ? 'confirmed' : booking.status
                 });
             }
+
+            // Handle subscription payments
+            if (payment.paymentType === 'subscription' && payment.propertyId) {
+                const { Subscription } = await import('../../schema/index.js');
+                const subscriptionService = (await import('../../services/subscriptionService.js')).default;
+                
+                const subscription = await Subscription.findByPk(payment.propertyId);
+                if (subscription && subscription.status !== 'active') {
+                    await subscriptionService.activateSubscription(subscription.id);
+                }
+            }
         } catch (error) {
             console.error('Error handling successful payment:', error);
         }

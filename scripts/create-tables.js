@@ -13,7 +13,7 @@ const createTables = async () => {
     await User.sync({ force: false });
     
     // Import and sync other models
-    const { Property, Booking, Review, Message, Subscription, Favorite, KycDocument } = await import('../schema/index.js');
+    const { Property, Booking, Review, Message, Subscription, SubscriptionPlan, Favorite, KycDocument } = await import('../schema/index.js');
     
     console.log('📋 Creating Properties table...');
     await Property.sync({ force: false });
@@ -27,6 +27,9 @@ const createTables = async () => {
     console.log('📋 Creating Messages table...');
     await Message.sync({ force: false });
     
+    console.log('📋 Creating Subscription Plans table...');
+    await SubscriptionPlan.sync({ force: false });
+
     console.log('📋 Creating Subscriptions table...');
     await Subscription.sync({ force: false });
     
