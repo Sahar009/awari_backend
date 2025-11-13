@@ -46,3 +46,4 @@ router.get('/analytics', summaryValidation, handleValidationErrors, getHotelAnal
 export default router;
 
 
+

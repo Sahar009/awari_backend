@@ -64,3 +64,4 @@ export const availabilityValidation = [
   query('year').optional().isInt({ min: 1970 }).withMessage('year must be a valid year')
 ];
 
+

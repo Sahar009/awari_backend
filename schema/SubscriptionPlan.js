@@ -121,3 +121,4 @@ const SubscriptionPlan = sequelize.define(
 export default SubscriptionPlan;
 
 
+
