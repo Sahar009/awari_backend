@@ -68,29 +68,39 @@ class AuthService {
       }
 
       // Commit transaction - user is now saved
-      await transaction.commit();
-
-      // Send email verification (non-blocking - don't fail registration if email fails)
       try {
-        await this.sendVerificationEmail(user.email, verificationCode, user.firstName);
-      } catch (emailError) {
-        console.warn('⚠️ Email verification failed, but user was created:', emailError.message);
-        // Don't throw - user is already created
+        await transaction.commit();
+      } catch (commitError) {
+        console.error('Transaction commit error:', commitError);
+        // If commit fails, try to rollback
+        try {
+          await transaction.rollback();
+        } catch (rollbackError) {
+          console.error('Rollback also failed:', rollbackError);
+        }
+        throw new Error('Failed to save user. Please try again.');
       }
 
-      // Send welcome notification (non-blocking)
-      try {
-        await sendTemplateNotification('WELCOME', user);
-      } catch (notificationError) {
-        console.warn('⚠️ Welcome notification failed, but user was created:', notificationError.message);
-        // Don't throw - user is already created
-      }
-
-      return {
+      // Prepare response data - return immediately after commit
+      const responseData = {
         user: userWithoutPassword,
         token,
         message: 'Registration successful. Please check your email for verification code.'
       };
+
+      // Send email verification asynchronously (non-blocking - don't fail registration if email fails)
+      // Don't await - let it run in background
+      this.sendVerificationEmail(user.email, verificationCode, user.firstName).catch((emailError) => {
+        console.warn('⚠️ Email verification failed, but user was created:', emailError.message);
+      });
+
+      // Send welcome notification asynchronously (non-blocking)
+      sendTemplateNotification('WELCOME', user).catch((notificationError) => {
+        console.warn('⚠️ Welcome notification failed, but user was created:', notificationError.message);
+      });
+
+      // Return immediately - don't wait for email/notification
+      return responseData;
     } catch (error) {
       // Rollback transaction if it hasn't been committed
       if (transaction && !transaction.finished) {

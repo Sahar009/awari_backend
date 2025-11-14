@@ -8,11 +8,22 @@ class AuthController {
    * @param {Object} res - Express response object
    */
   async register(req, res) {
+    // Ensure we always send a response
+    let responseSent = false;
+    
+    const sendResponse = (statusCode, data) => {
+      if (!responseSent && !res.headersSent) {
+        responseSent = true;
+        return res.status(statusCode).json(data);
+      }
+      return null;
+    };
+
     try {
       // Check for validation errors
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        return res.status(400).json({
+        return sendResponse(400, {
           success: false,
           message: 'Validation failed',
           errors: errors.array()
@@ -21,46 +32,48 @@ class AuthController {
 
       const result = await authService.register(req.body);
 
-      // Ensure response is sent
-      return res.status(201).json({
+      // Ensure response is sent immediately after successful registration
+      return sendResponse(201, {
         success: true,
         message: result.message || 'User registered successfully',
         data: result
       });
     } catch (error) {
       console.error('Registration error:', error);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
       console.error('Error stack:', error.stack);
       
       // Check if response has already been sent
-      if (res.headersSent) {
+      if (responseSent || res.headersSent) {
         console.error('Response already sent, cannot send error response');
         return;
       }
 
       // Handle specific error types
       if (error.message === 'User with this email already exists') {
-        return res.status(409).json({
+        return sendResponse(409, {
           success: false,
           message: error.message
         });
       }
 
       if (error.message && error.message.includes('Validation error')) {
-        return res.status(400).json({
+        return sendResponse(400, {
           success: false,
           message: error.message
         });
       }
 
-      if (error.message && error.message.includes('Database error')) {
-        return res.status(500).json({
+      if (error.message && (error.message.includes('Database error') || error.message.includes('Failed to save user'))) {
+        return sendResponse(500, {
           success: false,
           message: error.message || 'Database error occurred. Please try again.'
         });
       }
 
       // Generic error response
-      return res.status(500).json({
+      return sendResponse(500, {
         success: false,
         message: error.message || 'Internal server error. Please try again.',
         ...(process.env.NODE_ENV === 'development' && { 
