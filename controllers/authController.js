@@ -21,14 +21,23 @@ class AuthController {
 
       const result = await authService.register(req.body);
 
-      res.status(201).json({
+      // Ensure response is sent
+      return res.status(201).json({
         success: true,
         message: result.message || 'User registered successfully',
         data: result
       });
     } catch (error) {
       console.error('Registration error:', error);
+      console.error('Error stack:', error.stack);
       
+      // Check if response has already been sent
+      if (res.headersSent) {
+        console.error('Response already sent, cannot send error response');
+        return;
+      }
+
+      // Handle specific error types
       if (error.message === 'User with this email already exists') {
         return res.status(409).json({
           success: false,
@@ -36,10 +45,28 @@ class AuthController {
         });
       }
 
-      res.status(500).json({
+      if (error.message && error.message.includes('Validation error')) {
+        return res.status(400).json({
+          success: false,
+          message: error.message
+        });
+      }
+
+      if (error.message && error.message.includes('Database error')) {
+        return res.status(500).json({
+          success: false,
+          message: error.message || 'Database error occurred. Please try again.'
+        });
+      }
+
+      // Generic error response
+      return res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: error.message || 'Internal server error. Please try again.',
+        ...(process.env.NODE_ENV === 'development' && { 
+          error: error.message,
+          stack: error.stack 
+        })
       });
     }
   }

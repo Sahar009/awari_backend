@@ -1,4 +1,5 @@
 import { User } from '../schema/index.js';
+import sequelize from '../database/db.js';
 import { 
   hashPassword, 
   verifyPassword, 
@@ -16,42 +17,74 @@ class AuthService {
    * @returns {Object} Created user object (without password)
    */
   async register(userData) {
+    const transaction = await sequelize.transaction();
+    
     try {
+      // Check if user already exists
       const existingUser = await User.findOne({
-        where: { email: userData.email }
+        where: { email: userData.email },
+        transaction
       });
 
       if (existingUser) {
+        await transaction.rollback();
         throw new Error('User with this email already exists');
       }
 
+      // Hash password
       const hashedPassword = await hashPassword(userData.password);
 
+      // Generate verification code
       const verificationCode = generateVerificationCode(4);
 
+      // Create user within transaction
       const user = await User.create({
         ...userData,
         passwordHash: hashedPassword,
         emailVerificationCode: verificationCode,
         emailVerified: false
-      });
+      }, { transaction });
 
+      // Generate token before committing
+      let token;
+      try {
+        token = this.generateToken(user);
+      } catch (tokenError) {
+        await transaction.rollback();
+        console.error('Token generation error:', tokenError);
+        throw new Error('Failed to generate authentication token');
+      }
+
+      // Prepare user data for response
+      let userWithoutPassword;
+      try {
+        const userJson = user.toJSON();
+        const { passwordHash: _, emailVerificationCode: __, ...rest } = userJson;
+        userWithoutPassword = rest;
+      } catch (jsonError) {
+        await transaction.rollback();
+        console.error('User data serialization error:', jsonError);
+        throw new Error('Failed to prepare user data');
+      }
+
+      // Commit transaction - user is now saved
+      await transaction.commit();
+
+      // Send email verification (non-blocking - don't fail registration if email fails)
       try {
         await this.sendVerificationEmail(user.email, verificationCode, user.firstName);
       } catch (emailError) {
         console.warn('⚠️ Email verification failed, but user was created:', emailError.message);
+        // Don't throw - user is already created
       }
 
-      // Send welcome notification
+      // Send welcome notification (non-blocking)
       try {
         await sendTemplateNotification('WELCOME', user);
       } catch (notificationError) {
         console.warn('⚠️ Welcome notification failed, but user was created:', notificationError.message);
+        // Don't throw - user is already created
       }
-
-      const token = this.generateToken(user);
-
-      const { passwordHash, emailVerificationCode, ...userWithoutPassword } = user.toJSON();
 
       return {
         user: userWithoutPassword,
@@ -59,6 +92,27 @@ class AuthService {
         message: 'Registration successful. Please check your email for verification code.'
       };
     } catch (error) {
+      // Rollback transaction if it hasn't been committed
+      if (transaction && !transaction.finished) {
+        await transaction.rollback();
+      }
+      
+      // Re-throw with better error message
+      if (error.name === 'SequelizeUniqueConstraintError') {
+        throw new Error('User with this email already exists');
+      }
+      
+      if (error.name === 'SequelizeValidationError') {
+        const validationErrors = error.errors.map(e => e.message).join(', ');
+        throw new Error(`Validation error: ${validationErrors}`);
+      }
+      
+      if (error.name === 'SequelizeDatabaseError') {
+        console.error('Database error during registration:', error);
+        throw new Error('Database error occurred. Please try again.');
+      }
+      
+      // Re-throw original error if it's already a known error
       throw error;
     }
   }
