@@ -29,14 +29,19 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 app.use(express.json({
-  limit: '10mb',
+  limit: '50mb', // Increased for file uploads
   verify: (req, res, buf) => {
     if (buf?.length) {
       req.rawBody = buf.toString();
     }
   }
 }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' })); // Increased for file uploads
+
+// Increase server timeout for file uploads to Cloudinary
+server.timeout = 300000; // 5 minutes for file uploads
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
   customCss: '.swagger-ui .topbar { display: none }',

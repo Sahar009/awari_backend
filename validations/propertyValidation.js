@@ -28,6 +28,11 @@ export const createPropertyValidation = [
     .isIn(['rent', 'sale', 'shortlet'])
     .withMessage('Invalid listing type'),
 
+  body('status')
+    .optional()
+    .isIn(['draft', 'pending', 'active', 'inactive', 'sold', 'rented', 'rejected', 'archived'])
+    .withMessage('Invalid status'),
+
   body('price')
     .isDecimal({ decimal_digits: '0,2' })
     .withMessage('Price must be a valid decimal number')

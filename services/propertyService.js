@@ -28,6 +28,24 @@ class PropertyService {
         throw new Error('A property with this title already exists');
       }
 
+      // Determine status based on media uploads
+      // If no images/media uploaded, save as draft; otherwise save as active
+      let propertyStatus = propertyData.status; // Use explicit status if provided
+      
+      if (!propertyStatus) {
+        // Check if media/images were uploaded
+        const hasMedia = uploadResults && uploadResults.media && uploadResults.media.length > 0;
+        const hasImages = uploadResults && uploadResults.images && uploadResults.images.length > 0;
+        
+        if (hasMedia || hasImages) {
+          // Property has images/media - set to active
+          propertyStatus = 'active';
+        } else {
+          // No images/media uploaded - set to draft
+          propertyStatus = 'draft';
+        }
+      }
+
       // Prepare property data
       const propertyDataToCreate = {
         ownerId,
@@ -37,6 +55,7 @@ class PropertyService {
         shortDescription: propertyData.shortDescription,
         propertyType: propertyData.propertyType,
         listingType: propertyData.listingType,
+        status: propertyStatus,
         price: propertyData.price,
         originalPrice: propertyData.originalPrice,
         currency: propertyData.currency || 'NGN',
@@ -550,9 +569,10 @@ class PropertyService {
         throw new Error('Property not found or you do not have permission to update it');
       }
 
-      // Only allow updates to draft or pending properties
-      if (!['draft', 'pending'].includes(property.status)) {
-        throw new Error('Only draft or pending properties can be updated');
+      // Allow updates to draft, pending, active, and inactive properties
+      // Prevent updates to sold, rented, rejected, or archived properties
+      if (!['draft', 'pending', 'active', 'inactive'].includes(property.status)) {
+        throw new Error('Only draft, pending, active, or inactive properties can be updated');
       }
 
       // Generate new slug if title is being updated
