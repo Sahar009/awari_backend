@@ -7,8 +7,27 @@ import * as bookingService from '../services/bookingService.js';
  */
 export const createBooking = async (req, res) => {
   try {
+    // Check if user is authenticated
+    if (!req.user || !req.user.id) {
+      console.error('❌ User not authenticated:', { user: req.user, headers: req.headers });
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated',
+        error: 'Authentication required to create booking'
+      });
+    }
+
     const userId = req.user.id;
     const bookingData = req.body;
+
+    console.log('📝 Creating booking:', {
+      userId,
+      bookingData: {
+        ...bookingData,
+        // Don't log sensitive data
+        guestPhone: bookingData.guestPhone ? '***' : undefined
+      }
+    });
 
     const result = await bookingService.createBooking(userId, bookingData);
 

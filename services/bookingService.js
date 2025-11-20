@@ -17,6 +17,55 @@ import { sendTemplateNotification } from './notificationService.js';
  */
 export const createBooking = async (userId, bookingData) => {
   try {
+    // Verify user exists
+    if (!userId) {
+      console.error('❌ No userId provided');
+      return {
+        success: false,
+        message: 'User ID is required',
+        statusCode: 400
+      };
+    }
+
+    console.log('🔍 Checking if user exists:', userId);
+    const user = await User.findByPk(userId, { 
+      paranoid: true,
+      attributes: ['id', 'email', 'firstName', 'lastName', 'status']
+    });
+    
+    if (!user) {
+      console.error('❌ User not found in database:', userId);
+      console.error('🔍 Attempting to find user without paranoid mode...');
+      const userWithoutParanoid = await User.findByPk(userId, { 
+        paranoid: false,
+        attributes: ['id', 'email', 'firstName', 'lastName', 'status', 'deletedAt']
+      });
+      
+      if (userWithoutParanoid) {
+        console.error('⚠️ User exists but is soft-deleted:', {
+          id: userWithoutParanoid.id,
+          deletedAt: userWithoutParanoid.deletedAt
+        });
+        return {
+          success: false,
+          message: 'Your account has been deleted. Please contact support.',
+          statusCode: 403
+        };
+      }
+      
+      return {
+        success: false,
+        message: 'User not found. Please log in again.',
+        statusCode: 404
+      };
+    }
+
+    console.log('✅ User found:', {
+      id: user.id,
+      email: user.email,
+      status: user.status
+    });
+
     const {
       propertyId,
       bookingType,
@@ -107,29 +156,75 @@ export const createBooking = async (userId, bookingData) => {
     }
 
     // Create booking
-    const booking = await Booking.create({
-      propertyId,
-      userId,
-      ownerId: property.owner.id,
-      bookingType,
-      checkInDate,
-      checkOutDate,
-      inspectionDate,
-      inspectionTime,
-      numberOfNights,
-      numberOfGuests: numberOfGuests || 1,
-      basePrice,
-      totalPrice,
-      currency,
-      serviceFee,
-      taxAmount,
-      discountAmount,
-      guestName,
-      guestPhone,
-      guestEmail,
-      specialRequests,
-      status: 'pending'
-    });
+    console.log('📝 Creating booking with userId:', userId);
+    let booking;
+    try {
+      booking = await Booking.create({
+        propertyId,
+        userId,
+        ownerId: property.owner.id,
+        bookingType,
+        checkInDate,
+        checkOutDate,
+        inspectionDate,
+        inspectionTime,
+        numberOfNights,
+        numberOfGuests: numberOfGuests || 1,
+        basePrice,
+        totalPrice,
+        currency,
+        serviceFee,
+        taxAmount,
+        discountAmount,
+        guestName,
+        guestPhone,
+        guestEmail,
+        specialRequests,
+        status: 'pending'
+      });
+    } catch (error) {
+      console.error('❌ Error creating booking:', error);
+      
+      // Check if it's a foreign key constraint error
+      if (error.name === 'SequelizeForeignKeyConstraintError') {
+        console.error('🔍 Foreign key constraint error details:', {
+          table: error.table,
+          fields: error.fields,
+          value: error.value,
+          index: error.index
+        });
+        
+        // If it's the userId foreign key, verify user exists
+        if (error.fields && error.fields.includes('userId')) {
+          const userCheck = await User.findByPk(userId, { 
+            paranoid: false,
+            attributes: ['id', 'email', 'deletedAt', 'status']
+          });
+          
+          if (!userCheck) {
+            return {
+              success: false,
+              message: 'User account not found. Please log in again.',
+              statusCode: 404
+            };
+          } else if (userCheck.deletedAt) {
+            return {
+              success: false,
+              message: 'Your account has been deleted. Please contact support.',
+              statusCode: 403
+            };
+          } else {
+            return {
+              success: false,
+              message: 'Unable to create booking. Please try again or contact support.',
+              statusCode: 500
+            };
+          }
+        }
+      }
+      
+      throw error; // Re-throw if it's not a foreign key error we can handle
+    }
 
     // Fetch the created booking with relations
     const createdBooking = await Booking.findByPk(booking.id, {

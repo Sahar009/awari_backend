@@ -19,6 +19,8 @@ export const authenticateToken = async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
     
+    console.log('🔐 Token decoded, user ID:', decoded.id);
+    
     // Get user from database (exclude soft-deleted users)
     const user = await User.findByPk(decoded.id, {
       attributes: { exclude: ['passwordHash'] },
@@ -26,11 +28,32 @@ export const authenticateToken = async (req, res, next) => {
     });
 
     if (!user) {
+      console.error('❌ User not found in database for token ID:', decoded.id);
+      // Check if user exists but is soft-deleted
+      const deletedUser = await User.findByPk(decoded.id, {
+        attributes: ['id', 'email', 'deletedAt'],
+        paranoid: false
+      });
+      
+      if (deletedUser) {
+        console.error('⚠️ User exists but is soft-deleted:', deletedUser.deletedAt);
+        return res.status(401).json({
+          success: false,
+          message: 'Your account has been deleted. Please contact support.'
+        });
+      }
+      
       return res.status(401).json({
         success: false,
         message: 'Invalid token - user not found'
       });
     }
+    
+    console.log('✅ User authenticated:', {
+      id: user.id,
+      email: user.email,
+      status: user.status
+    });
 
     // Check if user is active
     if (user.status !== 'active') {
