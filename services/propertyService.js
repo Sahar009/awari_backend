@@ -1,4 +1,4 @@
-import { Property, PropertyMedia, User, Booking, Review } from '../schema/index.js';
+import { Property, PropertyMedia, User } from '../schema/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../database/db.js';
 import { deleteFromCloudinary, extractPublicId } from '../config/cloudinary.js';
@@ -28,24 +28,6 @@ class PropertyService {
         throw new Error('A property with this title already exists');
       }
 
-      // Determine status based on media uploads
-      // If no images/media uploaded, save as draft; otherwise save as active
-      let propertyStatus = propertyData.status; // Use explicit status if provided
-      
-      if (!propertyStatus) {
-        // Check if media/images were uploaded
-        const hasMedia = uploadResults && uploadResults.media && uploadResults.media.length > 0;
-        const hasImages = uploadResults && uploadResults.images && uploadResults.images.length > 0;
-        
-        if (hasMedia || hasImages) {
-          // Property has images/media - set to active
-          propertyStatus = 'active';
-        } else {
-          // No images/media uploaded - set to draft
-          propertyStatus = 'draft';
-        }
-      }
-
       // Prepare property data
       const propertyDataToCreate = {
         ownerId,
@@ -55,7 +37,6 @@ class PropertyService {
         shortDescription: propertyData.shortDescription,
         propertyType: propertyData.propertyType,
         listingType: propertyData.listingType,
-        status: propertyStatus,
         price: propertyData.price,
         originalPrice: propertyData.originalPrice,
         currency: propertyData.currency || 'NGN',
@@ -182,7 +163,15 @@ class PropertyService {
       // Build where clause
       const whereClause = {};
       if (propertyType) whereClause.propertyType = propertyType;
-      if (listingType) whereClause.listingType = listingType;
+      if (listingType) {
+        // Handle comma-separated values like "shortlet,hotel"
+        const listingTypes = listingType.split(',').map(t => t.trim());
+        if (listingTypes.length === 1) {
+          whereClause.listingType = listingTypes[0];
+        } else {
+          whereClause.listingType = { [Op.in]: listingTypes };
+        }
+      }
       if (status) whereClause.status = status;
       if (city) whereClause.city = city;
       if (state) whereClause.state = state;
@@ -319,101 +308,28 @@ class PropertyService {
   /**
    * Get a specific property by ID
    */
-  async getPropertyById(propertyId, incrementView = false, options = {}) {
+  async getPropertyById(propertyId, incrementView = false) {
     try {
-      const { includeBookings = false, includeReviews = false, bookingsLimit = 10, reviewsLimit = 10 } = options;
-
-      const propertyIncludes = [
-        {
-          model: User,
-          as: 'owner',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'role', 'avatarUrl']
-        },
-        {
-          model: User,
-          as: 'agent',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl'],
-          required: false
-        },
-        {
-          model: PropertyMedia,
-          as: 'media',
-          where: { isActive: true },
-          required: false,
-          order: [['order', 'ASC']]
-        }
-      ];
-
-      if (includeBookings) {
-        propertyIncludes.push({
-          model: Booking,
-          as: 'bookings',
-          separate: true,
-          required: false,
-          limit: bookingsLimit,
-          order: [['createdAt', 'DESC']],
-          attributes: [
-            'id',
-            'bookingType',
-            'status',
-            'checkInDate',
-            'checkOutDate',
-            'inspectionDate',
-            'numberOfNights',
-            'numberOfGuests',
-            'totalPrice',
-            'currency',
-            'paymentStatus',
-            'createdAt'
-          ],
-          include: [
-            {
-              model: User,
-              as: 'user',
-              attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
-            }
-          ]
-        });
-      }
-
-      if (includeReviews) {
-        propertyIncludes.push({
-          model: Review,
-          as: 'reviews',
-          separate: true,
-          required: false,
-          limit: reviewsLimit,
-          order: [['createdAt', 'DESC']],
-          attributes: [
-            'id',
-            'reviewType',
-            'rating',
-            'title',
-            'content',
-            'status',
-            'isVerified',
-            'helpfulCount',
-            'reportCount',
-            'createdAt'
-          ],
-          include: [
-            {
-              model: User,
-              as: 'reviewer',
-              attributes: ['id', 'firstName', 'lastName', 'email', 'avatarUrl', 'role']
-            },
-            {
-              model: Booking,
-              as: 'booking',
-              attributes: ['id', 'bookingType', 'checkInDate', 'checkOutDate', 'numberOfNights', 'numberOfGuests'],
-              required: false
-            }
-          ]
-        });
-      }
-
       const property = await Property.findByPk(propertyId, {
-        include: propertyIncludes
+        include: [
+          {
+            model: User,
+            as: 'owner',
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+          },
+          {
+            model: User,
+            as: 'agent',
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+          },
+          {
+            model: PropertyMedia,
+            as: 'media',
+            where: { isActive: true },
+            required: false,
+            order: [['order', 'ASC']]
+          }
+        ]
       });
 
       if (!property) {
@@ -437,102 +353,29 @@ class PropertyService {
   /**
    * Get property by slug
    */
-  async getPropertyBySlug(slug, incrementView = false, options = {}) {
+  async getPropertyBySlug(slug, incrementView = false) {
     try {
-      const { includeBookings = false, includeReviews = false, bookingsLimit = 10, reviewsLimit = 10 } = options;
-
-      const propertyIncludes = [
-        {
-          model: User,
-          as: 'owner',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
-        },
-        {
-          model: User,
-          as: 'agent',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl'],
-          required: false
-        },
-        {
-          model: PropertyMedia,
-          as: 'media',
-          where: { isActive: true },
-          required: false,
-          order: [['order', 'ASC']]
-        }
-      ];
-
-      if (includeBookings) {
-        propertyIncludes.push({
-          model: Booking,
-          as: 'bookings',
-          separate: true,
-          required: false,
-          limit: bookingsLimit,
-          order: [['createdAt', 'DESC']],
-          attributes: [
-            'id',
-            'bookingType',
-            'status',
-            'checkInDate',
-            'checkOutDate',
-            'inspectionDate',
-            'numberOfNights',
-            'numberOfGuests',
-            'totalPrice',
-            'currency',
-            'paymentStatus',
-            'createdAt'
-          ],
-          include: [
-            {
-              model: User,
-              as: 'user',
-              attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
-            }
-          ]
-        });
-      }
-
-      if (includeReviews) {
-        propertyIncludes.push({
-          model: Review,
-          as: 'reviews',
-          separate: true,
-          required: false,
-          limit: reviewsLimit,
-          order: [['createdAt', 'DESC']],
-          attributes: [
-            'id',
-            'reviewType',
-            'rating',
-            'title',
-            'content',
-            'status',
-            'isVerified',
-            'helpfulCount',
-            'reportCount',
-            'createdAt'
-          ],
-          include: [
-            {
-              model: User,
-              as: 'reviewer',
-              attributes: ['id', 'firstName', 'lastName', 'email', 'avatarUrl', 'role']
-            },
-            {
-              model: Booking,
-              as: 'booking',
-              attributes: ['id', 'bookingType', 'checkInDate', 'checkOutDate', 'numberOfNights', 'numberOfGuests'],
-              required: false
-            }
-          ]
-        });
-      }
-
       const property = await Property.findOne({
         where: { slug },
-        include: propertyIncludes
+        include: [
+          {
+            model: User,
+            as: 'owner',
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+          },
+          {
+            model: User,
+            as: 'agent',
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+          },
+          {
+            model: PropertyMedia,
+            as: 'media',
+            where: { isActive: true },
+            required: false,
+            order: [['order', 'ASC']]
+          }
+        ]
       });
 
       if (!property) {
@@ -569,10 +412,9 @@ class PropertyService {
         throw new Error('Property not found or you do not have permission to update it');
       }
 
-      // Allow updates to draft, pending, active, and inactive properties
-      // Prevent updates to sold, rented, rejected, or archived properties
-      if (!['draft', 'pending', 'active', 'inactive'].includes(property.status)) {
-        throw new Error('Only draft, pending, active, or inactive properties can be updated');
+      // Only allow updates to draft or pending properties
+      if (!['draft', 'pending'].includes(property.status)) {
+        throw new Error('Only draft or pending properties can be updated');
       }
 
       // Generate new slug if title is being updated

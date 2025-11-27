@@ -28,11 +28,6 @@ export const createPropertyValidation = [
     .isIn(['rent', 'sale', 'shortlet'])
     .withMessage('Invalid listing type'),
 
-  body('status')
-    .optional()
-    .isIn(['draft', 'pending', 'active', 'inactive', 'sold', 'rented', 'rejected', 'archived'])
-    .withMessage('Invalid status'),
-
   body('price')
     .isDecimal({ decimal_digits: '0,2' })
     .withMessage('Price must be a valid decimal number')
@@ -715,7 +710,16 @@ export const propertyFilterValidation = [
 
   query('listingType')
     .optional()
-    .isIn(['rent', 'sale', 'shortlet'])
+    .custom((value) => {
+      // Handle comma-separated values like "shortlet,hotel"
+      const types = value.split(',').map(t => t.trim());
+      const validTypes = ['rent', 'sale', 'shortlet', 'hotel'];
+      const invalidTypes = types.filter(t => !validTypes.includes(t));
+      if (invalidTypes.length > 0) {
+        throw new Error(`Invalid listing type(s): ${invalidTypes.join(', ')}`);
+      }
+      return true;
+    })
     .withMessage('Invalid listing type filter'),
 
   query('status')
