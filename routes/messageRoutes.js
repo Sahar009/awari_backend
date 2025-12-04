@@ -1,4 +1,5 @@
 import express from 'express';
+import { validationResult } from 'express-validator';
 import messageController from '../controllers/messageController.js';
 import { authenticateToken } from '../middlewares/authMiddleware.js';
 import {
@@ -97,7 +98,6 @@ const router = express.Router();
 
 // Validation middleware
 const handleValidationErrors = (req, res, next) => {
-  const { validationResult } = require('express-validator');
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({
