@@ -15,9 +15,51 @@ import sequelize from '../database/db.js';
 export const addToFavorites = async (userId, propertyId, notes = null) => {
   const transaction = await sequelize.transaction();
   try {
-    // Verify user exists and is active
+    console.log('🔍 [FAVORITE SERVICE] Adding to favorites:', { userId, propertyId });
+    
+    // First, verify user exists using raw SQL to bypass case sensitivity issues
+    const [userCheck] = await sequelize.query(
+      'SELECT id, email, status, deletedAt FROM users WHERE id = ? LIMIT 1',
+      {
+        replacements: [userId],
+        type: sequelize.QueryTypes.SELECT,
+        transaction
+      }
+    );
+
+    if (!userCheck) {
+      await transaction.rollback();
+      console.error('❌ [FAVORITE SERVICE] User not found in database:', userId);
+      return {
+        success: false,
+        message: 'User account not found. Please log in again.',
+        statusCode: 404
+      };
+    }
+
+    if (userCheck.deletedAt) {
+      await transaction.rollback();
+      console.error('❌ [FAVORITE SERVICE] User is soft-deleted:', userId);
+      return {
+        success: false,
+        message: 'User account not found. Please log in again.',
+        statusCode: 404
+      };
+    }
+
+    if (userCheck.status !== 'active') {
+      await transaction.rollback();
+      console.error('❌ [FAVORITE SERVICE] User is not active:', { userId, status: userCheck.status });
+      return {
+        success: false,
+        message: 'User account is not active. Please contact support.',
+        statusCode: 403
+      };
+    }
+
+    // Verify user using Sequelize model (for consistency)
     const user = await User.findByPk(userId, {
-      paranoid: true,
+      paranoid: false,
       attributes: ['id', 'email', 'status'],
       transaction
     });
@@ -61,15 +103,19 @@ export const addToFavorites = async (userId, propertyId, notes = null) => {
       };
     }
 
-    // Re-verify user within transaction
-    const userInTransaction = await User.findByPk(userId, {
-      paranoid: true,
-      attributes: ['id'],
-      transaction
-    });
+    // Re-verify user within transaction using raw SQL
+    const [userInTransactionCheck] = await sequelize.query(
+      'SELECT id FROM users WHERE id = ? AND deletedAt IS NULL LIMIT 1',
+      {
+        replacements: [userId],
+        type: sequelize.QueryTypes.SELECT,
+        transaction
+      }
+    );
 
-    if (!userInTransaction) {
+    if (!userInTransactionCheck) {
       await transaction.rollback();
+      console.error('❌ [FAVORITE SERVICE] User not found in transaction:', userId);
       return {
         success: false,
         message: 'User account not found. Please log in again.',
@@ -78,14 +124,16 @@ export const addToFavorites = async (userId, propertyId, notes = null) => {
     }
 
     // Create new favorite within transaction
+    console.log('✅ [FAVORITE SERVICE] Creating favorite record...');
     const favorite = await Favorite.create({
-      userId: userInTransaction.id,
+      userId: userInTransactionCheck.id,
       propertyId,
       notes,
       isActive: true
     }, { transaction });
 
     await transaction.commit();
+    console.log('✅ [FAVORITE SERVICE] Favorite created successfully:', favorite.id);
 
     return {
       success: true,
@@ -99,9 +147,19 @@ export const addToFavorites = async (userId, propertyId, notes = null) => {
       console.error('❌ [FAVORITE SERVICE] Transaction rolled back due to error');
     }
     console.error('❌ [FAVORITE SERVICE] Error adding to favorites:', error);
+    console.error('❌ [FAVORITE SERVICE] Error name:', error.name);
+    console.error('❌ [FAVORITE SERVICE] Error message:', error.message);
+    console.error('❌ [FAVORITE SERVICE] Error stack:', error.stack);
     
     // Handle foreign key constraint errors
     if (error.name === 'SequelizeForeignKeyConstraintError') {
+      console.error('❌ [FAVORITE SERVICE] Foreign key constraint error details:', {
+        table: error.table,
+        fields: error.fields,
+        value: error.value,
+        index: error.index,
+        original: error.original?.message
+      });
       return {
         success: false,
         message: 'User account not found. Please log in again.',
