@@ -20,7 +20,7 @@ export const createBooking = async (req, res) => {
     const userId = req.user.id;
     const bookingData = req.body;
 
-    console.log('📝 Creating booking:', {
+    console.log('📝 [BOOKING CONTROLLER] Creating booking:', {
       userId,
       bookingData: {
         ...bookingData,
@@ -30,6 +30,14 @@ export const createBooking = async (req, res) => {
     });
 
     const result = await bookingService.createBooking(userId, bookingData);
+    
+    console.log('📤 [BOOKING CONTROLLER] Service result:', {
+      success: result.success,
+      statusCode: result.statusCode,
+      message: result.message,
+      hasData: !!result.data,
+      hasError: !!result.error
+    });
 
     return res.status(result.statusCode).json({
       success: result.success,
@@ -38,10 +46,14 @@ export const createBooking = async (req, res) => {
       error: result.error
     });
   } catch (error) {
-    console.error('Create booking controller error:', error);
+    console.error('❌ [BOOKING CONTROLLER] Create booking controller error:', error);
+    console.error('❌ [BOOKING CONTROLLER] Error name:', error.name);
+    console.error('❌ [BOOKING CONTROLLER] Error message:', error.message);
+    console.error('❌ [BOOKING CONTROLLER] Error stack:', error.stack);
+    console.error('❌ [BOOKING CONTROLLER] Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
     return res.status(500).json({
       success: false,
-      message: 'Internal server error',
+      message: 'Unable to create booking. Please try again or contact support.',
       error: error.message
     });
   }

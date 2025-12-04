@@ -85,8 +85,8 @@ export const getDashboardSummary = async (hotelId, options = {}) => {
       },
       attributes: [
         [fn('DATE_FORMAT', col('Payment.createdAt'), '%Y-%m'), 'period'],
-        [fn('SUM', col('amount')), 'totalAmount'],
-        [fn('COUNT', col('id')), 'transactions']
+        [fn('SUM', col('Payment.amount')), 'totalAmount'],
+        [fn('COUNT', col('Payment.id')), 'transactions']
       ],
       include: [
         {
@@ -488,6 +488,12 @@ export const getHotelAnalytics = async (hotelId, options = {}) => {
     };
   }
 };
+
+
+
+
+
+
 
 
 

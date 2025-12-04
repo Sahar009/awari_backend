@@ -784,6 +784,42 @@ class AuthController {
       });
     }
   }
+
+  /**
+   * Register or update device push token
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async registerDeviceToken(req, res) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: errors.array()
+        });
+      }
+
+      const userId = req.user.id;
+      const { pushToken } = req.body;
+
+      const result = await authService.registerDeviceToken(userId, pushToken);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Device token registered successfully',
+        data: result
+      });
+    } catch (error) {
+      console.error('Register device token error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to register device token',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
 }
 
 export default new AuthController();

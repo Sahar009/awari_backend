@@ -181,7 +181,9 @@ export const sendNotification = async (notificationId, channels = null) => {
         });
 
         // Check if push notification was successful
-        if (pushResult && !pushResult.error) {
+        // Expo returns { success: true, tickets } or { success: false, error }
+        // FCM returns a message ID string or throws error
+        if (pushResult && (pushResult.success === true || typeof pushResult === 'string')) {
           results.push.sent = true;
           await notification.update({ pushSent: true });
         } else {
@@ -558,7 +560,8 @@ const getEmailTemplate = (type) => {
     [NotificationTypes.PROPERTY_APPROVED]: 'property-approved',
     [NotificationTypes.PROPERTY_REJECTED]: 'property-rejected',
     [NotificationTypes.PAYMENT_SUCCESS]: 'payment-success',
-    [NotificationTypes.PAYMENT_FAILED]: 'payment-failed'
+    [NotificationTypes.PAYMENT_FAILED]: 'payment-failed',
+    'BOOKING_RECEIPT': 'booking-receipt'
   };
 
   return templateMap[type] || 'default';

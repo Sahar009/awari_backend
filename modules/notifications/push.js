@@ -1,4 +1,5 @@
 import admin from 'firebase-admin';
+import { Expo } from 'expo-server-sdk';
 
 class PushNotificationService {
     constructor() {
@@ -11,9 +12,13 @@ class PushNotificationService {
 
     initialize() {
         try {
+            // Initialize Expo Push API client (always available, no credentials needed)
+            this.expo = new Expo();
+            console.log('✅ Expo Push API client initialized');
+
             // Check if Firebase credentials are available
             if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_PRIVATE_KEY) {
-                console.warn('⚠️ Firebase credentials not found. Push notifications will be disabled.');
+                console.warn('⚠️ Firebase credentials not found. FCM push notifications will be disabled.');
                 this.messaging = null;
                 return;
             }
@@ -26,11 +31,11 @@ class PushNotificationService {
                     private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
                     client_email: process.env.FIREBASE_CLIENT_EMAIL,
                     client_id: process.env.FIREBASE_CLIENT_ID,
-                    auth_uri: process.env.FIREBASE_AUTH_URI,
-                    token_uri: process.env.FIREBASE_TOKEN_URI,
-                    auth_provider_x509_cert_url: process.env.FIREBASE_AUTH_PROVIDER_CERT_URL,
+                    auth_uri: process.env.FIREBASE_AUTH_URI || 'https://accounts.google.com/o/oauth2/auth',
+                    token_uri: process.env.FIREBASE_TOKEN_URI || 'https://oauth2.googleapis.com/token',
+                    auth_provider_x509_cert_url: process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL || 'https://www.googleapis.com/oauth2/v1/certs',
                     client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL,
-                    universe_domain: process.env.FIREBASE_UNIVERSE_DOMAIN
+                    universe_domain: process.env.FIREBASE_UNIVERSE_DOMAIN || 'googleapis.com'
                 };
 
                 admin.initializeApp({
@@ -46,8 +51,26 @@ class PushNotificationService {
         }
     }
 
+    /**
+     * Check if token is an Expo push token
+     * Expo tokens start with "ExponentPushToken[" or "ExpoPushToken["
+     */
+    isExpoPushToken(token) {
+        return typeof token === 'string' && (
+            token.startsWith('ExponentPushToken[') || 
+            token.startsWith('ExpoPushToken[') ||
+            token.startsWith('ExponentPushToken:')
+        );
+    }
+
     async sendToDevice(token, notification) {
         try {
+            // Check if token is Expo push token
+            if (this.isExpoPushToken(token)) {
+                return await this.sendExpoPushNotification(token, notification);
+            }
+
+            // Otherwise, use Firebase FCM
             if (!this.messaging) {
                 console.warn('⚠️ Firebase Messaging not initialized. Push notification skipped.');
                 return { success: false, error: 'Firebase not initialized' };
@@ -55,10 +78,71 @@ class PushNotificationService {
 
             const message = this.buildMessage(token, notification);
             const response = await this.messaging.send(message);
-            console.log('Successfully sent message:', response);
+            console.log('Successfully sent FCM message:', response);
             return response;
         } catch (error) {
             console.error('Error sending message:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Send notification via Expo Push API
+     */
+    async sendExpoPushNotification(token, notification) {
+        try {
+            if (!this.expo) {
+                console.warn('⚠️ Expo Push API not initialized. Push notification skipped.');
+                return { success: false, error: 'Expo Push API not initialized' };
+            }
+
+            // Check if token is valid Expo push token
+            if (!Expo.isExpoPushToken(token)) {
+                console.warn('⚠️ Invalid Expo push token:', token);
+                return { success: false, error: 'Invalid Expo push token' };
+            }
+
+            // Build Expo push message
+            const messages = [{
+                to: token,
+                sound: 'default',
+                title: notification.title,
+                body: notification.body,
+                data: notification.data || {},
+                badge: 1,
+            }];
+
+            // Send notification
+            const chunks = this.expo.chunkPushNotifications(messages);
+            const tickets = [];
+
+            for (const chunk of chunks) {
+                try {
+                    const ticketChunk = await this.expo.sendPushNotificationsAsync(chunk);
+                    tickets.push(...ticketChunk);
+                } catch (error) {
+                    console.error('Error sending Expo push notification chunk:', error);
+                    throw error;
+                }
+            }
+
+            // Check for errors in tickets
+            const errors = [];
+            for (const ticket of tickets) {
+                if (ticket.status === 'error') {
+                    errors.push(ticket.message || 'Unknown error');
+                }
+            }
+
+            if (errors.length > 0) {
+                console.error('Expo push notification errors:', errors);
+                return { success: false, error: errors.join(', ') };
+            }
+
+            console.log('✅ Successfully sent Expo push notification');
+            return { success: true, tickets };
+        } catch (error) {
+            console.error('Error sending Expo push notification:', error);
             throw error;
         }
     }

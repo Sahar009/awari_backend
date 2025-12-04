@@ -155,6 +155,11 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING(45),
     allowNull: true
   },
+  pushToken: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    comment: 'Firebase Cloud Messaging device token for push notifications'
+  },
   deletedAt: {
     type: DataTypes.DATE,
     allowNull: true

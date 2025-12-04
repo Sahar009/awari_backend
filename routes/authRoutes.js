@@ -5,7 +5,8 @@ import {
   registerValidation,
   loginValidation,
   updateProfileValidation,
-  changePasswordValidation
+  changePasswordValidation,
+  registerDeviceTokenValidation
 } from '../validations/authValidation.js';
 
 const router = express.Router();
@@ -795,5 +796,39 @@ router.post('/refresh-token', authenticateToken, authController.refreshToken);
  *         description: Internal server error
  * */
 router.post('/logout', authenticateToken, authController.logout);
+
+/**
+ * @swagger
+ * /api/auth/register-device-token:
+ *   post:
+ *     summary: Register or update device push token for push notifications
+ *     tags: [Authentication]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - pushToken
+ *             properties:
+ *               pushToken:
+ *                 type: string
+ *                 description: Firebase Cloud Messaging device token
+ *           example:
+ *             pushToken: "fcm-token-here"
+ *     responses:
+ *       200:
+ *         description: Device token registered successfully
+ *       400:
+ *         description: Validation failed or invalid token
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ * */
+router.post('/register-device-token', authenticateToken, registerDeviceTokenValidation, authController.registerDeviceToken);
 
 export default router;

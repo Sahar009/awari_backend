@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Receipt - AWARI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .receipt-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #7C3AED;
+        }
+        .logo {
+            font-size: 36px;
+            font-weight: bold;
+            color: #7C3AED;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+        .receipt-title {
+            font-size: 28px;
+            color: #333;
+            margin-top: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .receipt-number {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .info-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        .info-box {
+            flex: 1;
+            min-width: 250px;
+            margin: 10px;
+        }
+        .info-box h3 {
+            color: #7C3AED;
+            font-size: 16px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #7C3AED;
+            padding-bottom: 5px;
+        }
+        .info-row {
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #555;
+            display: inline-block;
+            min-width: 120px;
+        }
+        .info-value {
+            color: #333;
+        }
+        .booking-details {
+            background-color: #F9FAFB;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 30px 0;
+            border-left: 4px solid #7C3AED;
+        }
+        .booking-details h3 {
+            color: #7C3AED;
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+        .property-info {
+            background-color: #EDE9FE;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .property-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #111827;
+            margin-bottom: 10px;
+        }
+        .property-address {
+            color: #6B7280;
+            font-size: 14px;
+        }
+        .pricing-table {
+            width: 100%;
+            margin: 30px 0;
+            border-collapse: collapse;
+        }
+        .pricing-table th {
+            background-color: #7C3AED;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+        }
+        .pricing-table td {
+            padding: 12px;
+            border-bottom: 1px solid #E5E7EB;
+            font-size: 14px;
+        }
+        .pricing-table tr:last-child td {
+            border-bottom: none;
+        }
+        .pricing-table .label-col {
+            color: #6B7280;
+            font-weight: 500;
+        }
+        .pricing-table .amount-col {
+            text-align: right;
+            color: #111827;
+            font-weight: 500;
+        }
+        .total-row {
+            background-color: #F3F4F6;
+            font-weight: bold;
+        }
+        .total-row .label-col {
+            color: #111827;
+            font-size: 16px;
+        }
+        .total-row .amount-col {
+            color: #7C3AED;
+            font-size: 18px;
+        }
+        .payment-info {
+            background-color: #ECFDF5;
+            border: 2px solid #10B981;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+        .payment-info h3 {
+            color: #10B981;
+            font-size: 16px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+        .payment-status {
+            display: inline-block;
+            background-color: #10B981;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .important-notes {
+            background-color: #FEF3C7;
+            border-left: 4px solid #F59E0B;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+        .important-notes h4 {
+            color: #92400E;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .important-notes ul {
+            margin-left: 20px;
+            color: #78350F;
+        }
+        .important-notes li {
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #E5E7EB;
+            text-align: center;
+            color: #6B7280;
+            font-size: 12px;
+        }
+        .footer-links {
+            margin: 15px 0;
+        }
+        .footer-links a {
+            color: #7C3AED;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .print-button {
+            display: inline-block;
+            background-color: #7C3AED;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 20px 0;
+            text-align: center;
+        }
+        @media print {
+            body {
+                background-color: white;
+                padding: 0;
+            }
+            .receipt-container {
+                box-shadow: none;
+                padding: 20px;
+            }
+            .print-button {
+                display: none;
+            }
+        }
+        .divider {
+            height: 1px;
+            background-color: #E5E7EB;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">AWARI</div>
+            <h1 class="receipt-title">Booking Receipt</h1>
+            <div class="receipt-number">
+                Receipt #<%= booking?.id?.slice(-12).toUpperCase() || 'N/A' %>
+            </div>
+            <div class="receipt-number" style="margin-top: 5px;">
+                Date: <%= new Date(booking?.createdAt || new Date()).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                }) %>
+            </div>
+        </div>
+
+        <!-- Customer & Booking Info -->
+        <div class="info-section">
+            <div class="info-box">
+                <h3>Guest Information</h3>
+                <div class="info-row">
+                    <span class="info-label">Name:</span>
+                    <span class="info-value"><%= user?.firstName %> <%= user?.lastName %></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Email:</span>
+                    <span class="info-value"><%= user?.email %></span>
+                </div>
+                <% if (user?.phone) { %>
+                <div class="info-row">
+                    <span class="info-label">Phone:</span>
+                    <span class="info-value"><%= user.phone %></span>
+                </div>
+                <% } %>
+            </div>
+
+            <div class="info-box">
+                <h3>Booking Information</h3>
+                <div class="info-row">
+                    <span class="info-label">Booking ID:</span>
+                    <span class="info-value">#<%= booking?.id?.slice(-8).toUpperCase() || 'N/A' %></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Type:</span>
+                    <span class="info-value" style="text-transform: capitalize;">
+                        <%= booking?.bookingType === 'shortlet' ? 'Shortlet' : 
+                            booking?.bookingType === 'rental' ? 'Rental' : 
+                            booking?.bookingType === 'sale_inspection' ? 'Property Inspection' : 
+                            booking?.bookingType || 'N/A' %>
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Status:</span>
+                    <span class="info-value" style="text-transform: capitalize; font-weight: 600;">
+                        <%= booking?.status || 'N/A' %>
+                    </span>
+                </div>
+                <% if (booking?.numberOfNights) { %>
+                <div class="info-row">
+                    <span class="info-label">Duration:</span>
+                    <span class="info-value"><%= booking.numberOfNights %> <%= booking.numberOfNights === 1 ? 'night' : 'nights' %></span>
+                </div>
+                <% } %>
+                <% if (booking?.numberOfGuests) { %>
+                <div class="info-row">
+                    <span class="info-label">Guests:</span>
+                    <span class="info-value"><%= booking.numberOfGuests %> <%= booking.numberOfGuests === 1 ? 'guest' : 'guests' %></span>
+                </div>
+                <% } %>
+            </div>
+        </div>
+
+        <!-- Property Information -->
+        <% if (property) { %>
+        <div class="property-info">
+            <div class="property-title"><%= property.title %></div>
+            <div class="property-address">
+                <%= property.address %>, <%= property.city %>, <%= property.state %>, <%= property.country || 'Nigeria' %>
+            </div>
+        </div>
+        <% } %>
+
+        <!-- Booking Dates -->
+        <div class="booking-details">
+            <h3>Booking Dates</h3>
+            <% if (booking?.checkInDate) { %>
+            <div class="info-row">
+                <span class="info-label">Check-in:</span>
+                <span class="info-value">
+                    <%= new Date(booking.checkInDate).toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    }) %>
+                </span>
+            </div>
+            <% } %>
+            <% if (booking?.checkOutDate) { %>
+            <div class="info-row">
+                <span class="info-label">Check-out:</span>
+                <span class="info-value">
+                    <%= new Date(booking.checkOutDate).toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    }) %>
+                </span>
+            </div>
+            <% } %>
+            <% if (booking?.inspectionDate) { %>
+            <div class="info-row">
+                <span class="info-label">Inspection Date:</span>
+                <span class="info-value">
+                    <%= new Date(booking.inspectionDate).toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    }) %>
+                    <% if (booking.inspectionTime) { %>
+                    at <%= booking.inspectionTime %>
+                    <% } %>
+                </span>
+            </div>
+            <% } %>
+        </div>
+
+        <!-- Pricing Breakdown -->
+        <table class="pricing-table">
+            <thead>
+                <tr>
+                    <th style="width: 70%;">Description</th>
+                    <th style="width: 30%;" class="amount-col">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="label-col">Base Price</td>
+                    <td class="amount-col">
+                        <%= booking?.currency || 'NGN' %> <%= parseFloat(booking?.basePrice || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                    </td>
+                </tr>
+                <% if (booking?.serviceFee && parseFloat(booking.serviceFee) > 0) { %>
+                <tr>
+                    <td class="label-col">Service Fee</td>
+                    <td class="amount-col">
+                        <%= booking.currency || 'NGN' %> <%= parseFloat(booking.serviceFee).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                    </td>
+                </tr>
+                <% } %>
+                <% if (booking?.taxAmount && parseFloat(booking.taxAmount) > 0) { %>
+                <tr>
+                    <td class="label-col">Tax</td>
+                    <td class="amount-col">
+                        <%= booking.currency || 'NGN' %> <%= parseFloat(booking.taxAmount).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                    </td>
+                </tr>
+                <% } %>
+                <% if (booking?.discountAmount && parseFloat(booking.discountAmount) > 0) { %>
+                <tr>
+                    <td class="label-col" style="color: #10B981;">Discount</td>
+                    <td class="amount-col" style="color: #10B981;">
+                        -<%= booking.currency || 'NGN' %> <%= parseFloat(booking.discountAmount).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                    </td>
+                </tr>
+                <% } %>
+                <tr class="total-row">
+                    <td class="label-col">Total Amount</td>
+                    <td class="amount-col">
+                        <%= booking?.currency || 'NGN' %> <%= parseFloat(booking?.totalPrice || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Payment Information -->
+        <div class="payment-info">
+            <h3>Payment Information</h3>
+            <div class="info-row">
+                <span class="info-label">Payment Status:</span>
+                <span class="payment-status"><%= booking?.paymentStatus || 'Pending' %></span>
+            </div>
+            <% if (booking?.paymentMethod) { %>
+            <div class="info-row" style="margin-top: 10px;">
+                <span class="info-label">Payment Method:</span>
+                <span class="info-value" style="text-transform: capitalize;">
+                    <%= booking.paymentMethod === 'paystack' ? 'Paystack (Card/Bank Transfer/USSD)' : 
+                        booking.paymentMethod === 'card' ? 'Credit/Debit Card' : 
+                        booking.paymentMethod === 'bank_transfer' ? 'Bank Transfer' : 
+                        booking.paymentMethod || 'N/A' %>
+                </span>
+            </div>
+            <% } %>
+            <% if (booking?.transactionId || payment?.reference) { %>
+            <div class="info-row" style="margin-top: 10px;">
+                <span class="info-label">Transaction ID:</span>
+                <span class="info-value">#<%= booking?.transactionId || payment?.reference || 'N/A' %></span>
+            </div>
+            <% } %>
+            <% if (payment?.createdAt) { %>
+            <div class="info-row" style="margin-top: 10px;">
+                <span class="info-label">Payment Date:</span>
+                <span class="info-value">
+                    <%= new Date(payment.createdAt).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }) %>
+                </span>
+            </div>
+            <% } %>
+        </div>
+
+        <!-- Special Requests -->
+        <% if (booking?.specialRequests) { %>
+        <div class="booking-details">
+            <h3>Special Requests</h3>
+            <p style="color: #374151; font-size: 14px; line-height: 1.8;"><%= booking.specialRequests %></p>
+        </div>
+        <% } %>
+
+        <!-- Important Notes -->
+        <div class="important-notes">
+            <h4>Important Information</h4>
+            <ul>
+                <% if (booking?.bookingType === 'shortlet' || booking?.bookingType === 'hotel') { %>
+                <li>Please arrive at the check-in time specified in your booking confirmation</li>
+                <li>Bring a valid government-issued ID for verification upon arrival</li>
+                <li>Contact the property owner/host if you have any questions or need assistance</li>
+                <li>Review the property rules and guidelines before your stay</li>
+                <% } else if (booking?.bookingType === 'rental') { %>
+                <li>Your rental application is being reviewed by the property owner</li>
+                <li>You will be notified once a decision has been made on your application</li>
+                <li>Ensure all required documents are submitted for faster processing</li>
+                <% } else if (booking?.bookingType === 'sale_inspection') { %>
+                <li>Please arrive on time for your scheduled property inspection</li>
+                <li>Bring a valid ID for verification</li>
+                <li>Contact the property owner if you need to reschedule</li>
+                <% } %>
+                <li>Keep this receipt for your records</li>
+                <li>For any inquiries, contact our support team at support@awari.com</li>
+            </ul>
+        </div>
+
+        <!-- Contact Information -->
+        <% if (property?.owner) { %>
+        <div class="booking-details">
+            <h3>Property Owner Contact</h3>
+            <div class="info-row">
+                <span class="info-label">Name:</span>
+                <span class="info-value"><%= property.owner.firstName %> <%= property.owner.lastName %></span>
+            </div>
+            <% if (property.owner.email) { %>
+            <div class="info-row">
+                <span class="info-label">Email:</span>
+                <span class="info-value"><%= property.owner.email %></span>
+            </div>
+            <% } %>
+            <% if (property.owner.phone) { %>
+            <div class="info-row">
+                <span class="info-label">Phone:</span>
+                <span class="info-value"><%= property.owner.phone %></span>
+            </div>
+            <% } %>
+        </div>
+        <% } %>
+
+        <!-- Print Button -->
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="javascript:window.print()" class="print-button">Print Receipt</a>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>Thank you for choosing AWARI!</strong></p>
+            <p>This is an official receipt for your booking. Please keep this document for your records.</p>
+            <div class="footer-links">
+                <a href="<%= actionUrl || 'https://awari.com' %>">Visit Website</a> |
+                <a href="<%= actionUrl || 'https://awari.com' %>/support">Support</a> |
+                <a href="<%= actionUrl || 'https://awari.com' %>/bookings">My Bookings</a>
+            </div>
+            <p style="margin-top: 15px;">
+                &copy; <%= new Date().getFullYear() %> AWARI. All rights reserved.<br>
+                This email was sent to <%= user?.email %> regarding your booking receipt.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+
+
+

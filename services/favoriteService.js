@@ -1,5 +1,6 @@
 import Favorite from '../schema/Favorite.js';
 import Property from '../schema/Property.js';
+import PropertyMedia from '../schema/PropertyMedia.js';
 import User from '../schema/User.js';
 import { Op } from 'sequelize';
 
@@ -151,6 +152,13 @@ export const getUserFavorites = async (userId, options = {}) => {
               model: User,
               as: 'agent',
               attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+            },
+            {
+              model: PropertyMedia,
+              as: 'media',
+              attributes: ['id', 'url', 'mediaType', 'isPrimary', 'isActive', 'order'],
+              where: { isActive: true },
+              required: false
             }
           ]
         }

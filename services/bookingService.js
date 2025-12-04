@@ -8,6 +8,8 @@ import {
   checkDateRangeAvailability 
 } from './availabilityService.js';
 import { sendTemplateNotification } from './notificationService.js';
+import { sendEmail } from '../modules/notifications/email.js';
+import Payment from '../schema/Payment.js';
 
 /**
  * Create a new booking
@@ -16,10 +18,14 @@ import { sendTemplateNotification } from './notificationService.js';
  * @returns {Object} Result object
  */
 export const createBooking = async (userId, bookingData) => {
+  console.log('🚀 [BOOKING SERVICE] Starting createBooking');
+  console.log('🚀 [BOOKING SERVICE] userId:', userId);
+  console.log('🚀 [BOOKING SERVICE] bookingData:', JSON.stringify(bookingData, null, 2));
+  
   try {
     // Verify user exists
     if (!userId) {
-      console.error('❌ No userId provided');
+      console.error('❌ [BOOKING SERVICE] No userId provided');
       return {
         success: false,
         message: 'User ID is required',
@@ -27,7 +33,7 @@ export const createBooking = async (userId, bookingData) => {
       };
     }
 
-    console.log('🔍 Checking if user exists:', userId);
+    console.log('🔍 [BOOKING SERVICE] Checking if user exists:', userId);
     const user = await User.findByPk(userId, { 
       paranoid: true,
       attributes: ['id', 'email', 'firstName', 'lastName', 'status']
@@ -87,7 +93,29 @@ export const createBooking = async (userId, bookingData) => {
       specialRequests
     } = bookingData;
 
+    console.log('📋 [BOOKING SERVICE] Extracted booking data:', {
+      propertyId,
+      bookingType,
+      checkInDate,
+      checkOutDate,
+      inspectionDate,
+      inspectionTime,
+      numberOfNights,
+      numberOfGuests,
+      basePrice,
+      totalPrice,
+      currency,
+      serviceFee,
+      taxAmount,
+      discountAmount,
+      guestName,
+      guestPhone: guestPhone ? '***' : undefined,
+      guestEmail,
+      specialRequests: specialRequests ? '***' : undefined
+    });
+
     // Verify property exists and get owner
+    console.log('🔍 [BOOKING SERVICE] Fetching property:', propertyId);
     const property = await Property.findByPk(propertyId, {
       include: [
         {
@@ -99,6 +127,7 @@ export const createBooking = async (userId, bookingData) => {
     });
 
     if (!property) {
+      console.error('❌ [BOOKING SERVICE] Property not found:', propertyId);
       return {
         success: false,
         message: 'Property not found',
@@ -106,10 +135,19 @@ export const createBooking = async (userId, bookingData) => {
       };
     }
 
+    console.log('✅ [BOOKING SERVICE] Property found:', {
+      id: property.id,
+      title: property.title,
+      ownerId: property.ownerId,
+      hasOwner: !!property.owner
+    });
+
     // Check for conflicting bookings and availability
     if (bookingType === 'shortlet' || bookingType === 'rental') {
+      console.log('🔍 [BOOKING SERVICE] Checking availability for:', { propertyId, checkInDate, checkOutDate });
       // Check availability using the new availability service
       const availabilityCheck = await checkDateRangeAvailability(propertyId, checkInDate, checkOutDate);
+      console.log('📊 [BOOKING SERVICE] Availability check result:', availabilityCheck);
       
       if (!availabilityCheck.available) {
         return {
@@ -155,13 +193,34 @@ export const createBooking = async (userId, bookingData) => {
       }
     }
 
-    // Create booking
-    console.log('📝 Creating booking with userId:', userId);
-    let booking;
-    try {
-      booking = await Booking.create({
+    // Validate property owner exists
+    if (!property.owner || !property.owner.id) {
+      console.error('❌ [BOOKING SERVICE] Property owner not found:', {
         propertyId,
+        ownerId: property.ownerId,
+        owner: property.owner,
+        propertyData: {
+          id: property.id,
+          title: property.title,
+          ownerId: property.ownerId
+        }
+      });
+      return {
+        success: false,
+        message: 'Property owner information is missing',
+        statusCode: 400
+      };
+    }
+
+    console.log('✅ [BOOKING SERVICE] Property owner found:', {
+      ownerId: property.owner.id,
+      ownerEmail: property.owner.email
+    });
+
+    // Create booking
+    console.log('📝 [BOOKING SERVICE] Creating booking with data:', {
         userId,
+      propertyId,
         ownerId: property.owner.id,
         bookingType,
         checkInDate,
@@ -170,20 +229,58 @@ export const createBooking = async (userId, bookingData) => {
         inspectionTime,
         numberOfNights,
         numberOfGuests: numberOfGuests || 1,
-        basePrice,
-        totalPrice,
+      basePrice: Number(basePrice),
+      totalPrice: Number(totalPrice),
         currency,
-        serviceFee,
-        taxAmount,
-        discountAmount,
-        guestName,
-        guestPhone,
-        guestEmail,
-        specialRequests,
-        status: 'pending'
-      });
+      serviceFee: serviceFee ? Number(serviceFee) : 0,
+      taxAmount: taxAmount ? Number(taxAmount) : 0,
+      discountAmount: discountAmount ? Number(discountAmount) : 0
+    });
+    
+    let booking;
+    try {
+      const bookingPayload = {
+        propertyId,
+        userId,
+        ownerId: property.owner.id,
+        bookingType,
+        checkInDate: checkInDate || null,
+        checkOutDate: checkOutDate || null,
+        inspectionDate: inspectionDate || null,
+        inspectionTime: inspectionTime || null,
+        numberOfNights: numberOfNights || null,
+        numberOfGuests: numberOfGuests || 1,
+        basePrice: Number(basePrice),
+        totalPrice: Number(totalPrice),
+        currency: currency || 'NGN',
+        serviceFee: serviceFee ? Number(serviceFee) : 0,
+        taxAmount: taxAmount ? Number(taxAmount) : 0,
+        discountAmount: discountAmount ? Number(discountAmount) : 0,
+        guestName: guestName || null,
+        guestPhone: guestPhone || null,
+        guestEmail: guestEmail || null,
+        specialRequests: specialRequests || null,
+        status: 'pending',
+        paymentStatus: 'pending'
+      };
+      
+      console.log('💾 [BOOKING SERVICE] Booking payload:', JSON.stringify(bookingPayload, null, 2));
+      booking = await Booking.create(bookingPayload);
+      console.log('✅ [BOOKING SERVICE] Booking created successfully:', booking.id);
+      console.log('✅ [BOOKING SERVICE] Created booking data:', JSON.stringify(booking.toJSON(), null, 2));
     } catch (error) {
-      console.error('❌ Error creating booking:', error);
+      console.error('❌ [BOOKING SERVICE] Error creating booking:', error);
+      console.error('❌ [BOOKING SERVICE] Error name:', error.name);
+      console.error('❌ [BOOKING SERVICE] Error message:', error.message);
+      console.error('❌ [BOOKING SERVICE] Error stack:', error.stack);
+      console.error('❌ [BOOKING SERVICE] Error details:', {
+        name: error.name,
+        message: error.message,
+        errors: error.errors,
+        fields: error.fields,
+        value: error.value,
+        original: error.original
+      });
       
       // Check if it's a foreign key constraint error
       if (error.name === 'SequelizeForeignKeyConstraintError') {
@@ -191,7 +288,8 @@ export const createBooking = async (userId, bookingData) => {
           table: error.table,
           fields: error.fields,
           value: error.value,
-          index: error.index
+          index: error.index,
+          original: error.original
         });
         
         // If it's the userId foreign key, verify user exists
@@ -213,21 +311,59 @@ export const createBooking = async (userId, bookingData) => {
               message: 'Your account has been deleted. Please contact support.',
               statusCode: 403
             };
-          } else {
-            return {
-              success: false,
-              message: 'Unable to create booking. Please try again or contact support.',
-              statusCode: 500
-            };
           }
         }
+        
+        // If it's the propertyId foreign key
+        if (error.fields && error.fields.includes('propertyId')) {
+            return {
+              success: false,
+            message: 'Property not found or invalid',
+            statusCode: 404
+          };
+        }
+        
+        // If it's the ownerId foreign key
+        if (error.fields && error.fields.includes('ownerId')) {
+          return {
+            success: false,
+            message: 'Property owner not found',
+            statusCode: 404
+          };
+        }
+        
+        return {
+          success: false,
+          message: error.message || 'Database constraint error. Please check your data.',
+          error: error.original?.message || error.message,
+          statusCode: 400
+        };
       }
       
-      throw error; // Re-throw if it's not a foreign key error we can handle
+      // Handle validation errors
+      if (error.name === 'SequelizeValidationError') {
+        const validationErrors = error.errors.map((err) => ({
+          field: err.path,
+          message: err.message
+        }));
+        console.error('🔍 Validation errors:', validationErrors);
+        return {
+          success: false,
+          message: 'Validation failed',
+          errors: validationErrors,
+          statusCode: 400
+        };
+      }
+      
+      // Re-throw other errors to be caught by outer catch
+      throw error;
     }
 
     // Fetch the created booking with relations
-    const createdBooking = await Booking.findByPk(booking.id, {
+    console.log('🔍 [BOOKING SERVICE] Fetching created booking with relations:', booking.id);
+    let createdBooking;
+    try {
+      createdBooking = await Booking.findByPk(booking.id, {
       include: [
         {
           model: Property,
@@ -253,17 +389,53 @@ export const createBooking = async (userId, bookingData) => {
       ]
     });
 
+      if (!createdBooking) {
+        console.error('❌ [BOOKING SERVICE] Created booking not found after creation:', booking.id);
+        // Return the booking we just created even without relations
     return {
       success: true,
       message: 'Booking created successfully',
-      data: createdBooking,
+          data: { booking: booking },
+          statusCode: 201
+        };
+      }
+      
+      console.log('✅ [BOOKING SERVICE] Booking fetched with relations:', createdBooking.id);
+    } catch (fetchError) {
+      console.error('❌ [BOOKING SERVICE] Error fetching created booking:', fetchError);
+      console.error('❌ [BOOKING SERVICE] Fetch error details:', {
+        name: fetchError.name,
+        message: fetchError.message,
+        stack: fetchError.stack
+      });
+      // Return the booking we just created even if we can't fetch relations
+      return {
+        success: true,
+        message: 'Booking created successfully',
+        data: { booking: booking },
+        statusCode: 201
+      };
+    }
+
+    // Return response in format expected by frontend: { success, message, data: { booking } }
+    console.log('✅ [BOOKING SERVICE] Returning success response');
+    return {
+      success: true,
+      message: 'Booking created successfully',
+      data: {
+        booking: createdBooking
+      },
       statusCode: 201
     };
   } catch (error) {
-    console.error('Error creating booking:', error);
+    console.error('❌ [BOOKING SERVICE] Unexpected error creating booking:', error);
+    console.error('❌ [BOOKING SERVICE] Error name:', error.name);
+    console.error('❌ [BOOKING SERVICE] Error message:', error.message);
+    console.error('❌ [BOOKING SERVICE] Error stack:', error.stack);
+    console.error('❌ [BOOKING SERVICE] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
     return {
       success: false,
-      message: 'Failed to create booking',
+      message: error.message || 'Failed to create booking',
       error: error.message,
       statusCode: 500
     };
@@ -1097,5 +1269,90 @@ export const getBookingStatistics = async (userId, type = 'user') => {
       error: error.message,
       statusCode: 500
     };
+  }
+};
+
+/**
+ * Send booking receipt/invoice email
+ * @param {Object} booking - Booking object with relations
+ * @param {Object} user - User object
+ * @param {Object} payment - Payment object (optional)
+ * @returns {Promise<boolean>} Success status
+ */
+export const sendBookingReceipt = async (booking, user, payment = null) => {
+  try {
+    if (!booking || !user) {
+      console.error('Booking and user are required to send receipt');
+      return false;
+    }
+
+    // Fetch booking with all relations if not already included
+    let bookingWithRelations = booking;
+    if (!booking.property || !booking.user) {
+      bookingWithRelations = await Booking.findByPk(booking.id, {
+        include: [
+          {
+            model: Property,
+            as: 'property',
+            include: [
+              {
+                model: User,
+                as: 'owner',
+                attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+              }
+            ]
+          },
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+          },
+          {
+            model: User,
+            as: 'owner',
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+          }
+        ]
+      });
+    }
+
+    // Fetch payment if not provided
+    let paymentData = payment;
+    if (!paymentData && booking.id) {
+      paymentData = await Payment.findOne({
+        where: { bookingId: booking.id },
+        order: [['createdAt', 'DESC']]
+      });
+    }
+
+    const context = {
+      booking: bookingWithRelations,
+      user: user,
+      property: bookingWithRelations.property,
+      payment: paymentData,
+      actionUrl: `${process.env.FRONTEND_URL || 'https://awari.com'}/bookings/${booking.id}`
+    };
+
+    const subject = `Booking Receipt - ${bookingWithRelations.property?.title || 'Your Booking'}`;
+    const text = `Thank you for your booking. Your receipt is attached. Booking ID: ${booking.id}`;
+
+    const emailSent = await sendEmail(
+      user.email,
+      subject,
+      text,
+      'booking-receipt',
+      context
+    );
+
+    if (emailSent) {
+      console.log(`Booking receipt sent successfully to ${user.email} for booking ${booking.id}`);
+    } else {
+      console.error(`Failed to send booking receipt to ${user.email} for booking ${booking.id}`);
+    }
+
+    return emailSent;
+  } catch (error) {
+    console.error('Error sending booking receipt:', error);
+    return false;
   }
 };

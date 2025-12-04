@@ -799,6 +799,40 @@ class AuthService {
       throw error;
     }
   }
+
+  /**
+   * Register or update device push token for a user
+   * @param {string} userId - User ID
+   * @param {string} pushToken - Firebase Cloud Messaging token
+   * @returns {Object} Updated user object
+   */
+  async registerDeviceToken(userId, pushToken) {
+    try {
+      if (!pushToken || typeof pushToken !== 'string' || pushToken.trim().length === 0) {
+        throw new Error('Push token is required');
+      }
+
+      const user = await User.findByPk(userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Update push token
+      await user.update({ pushToken: pushToken.trim() });
+
+      // Return user data without sensitive information
+      const userJson = user.toJSON();
+      const { passwordHash, emailVerificationCode, passwordResetToken, accountDeletionToken, ...userData } = userJson;
+
+      return {
+        id: userData.id,
+        pushToken: userData.pushToken
+      };
+    } catch (error) {
+      console.error('Error registering device token:', error);
+      throw error;
+    }
+  }
 }
 
 export default new AuthService();

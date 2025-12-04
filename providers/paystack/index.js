@@ -360,6 +360,45 @@ class PaystackService {
                     transactionId: reference,
                     status: booking.bookingType === 'shortlet' && booking.status === 'pending' ? 'confirmed' : booking.status
                 });
+
+                // Send booking receipt email
+                try {
+                    const { sendBookingReceipt } = await import('../../services/bookingService.js');
+                    const { User } = await import('../../schema/index.js');
+                    
+                    const user = await User.findByPk(booking.userId);
+                    if (user) {
+                        // Fetch booking with relations
+                        const Booking = (await import('../../schema/Booking.js')).default;
+                        const Property = (await import('../../schema/Property.js')).default;
+                        
+                        const bookingWithRelations = await Booking.findByPk(booking.id, {
+                            include: [
+                                {
+                                    model: Property,
+                                    as: 'property',
+                                    include: [
+                                        {
+                                            model: User,
+                                            as: 'owner',
+                                            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+                                        }
+                                    ]
+                                },
+                                {
+                                    model: User,
+                                    as: 'user',
+                                    attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+                                }
+                            ]
+                        });
+
+                        await sendBookingReceipt(bookingWithRelations, user, payment);
+                    }
+                } catch (receiptError) {
+                    console.error('Error sending booking receipt after payment:', receiptError);
+                    // Don't fail the payment processing if receipt email fails
+                }
             }
 
             // Handle subscription payments

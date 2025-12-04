@@ -231,6 +231,18 @@ export const updateProfileValidation = [
 /**
  * Validation rules for password change
  */
+/**
+ * Validation rules for device token registration
+ */
+export const registerDeviceTokenValidation = [
+  body('pushToken')
+    .trim()
+    .notEmpty()
+    .withMessage('Push token is required')
+    .isLength({ min: 1, max: 500 })
+    .withMessage('Push token must be between 1 and 500 characters')
+];
+
 export const changePasswordValidation = [
   body('currentPassword')
     .notEmpty()

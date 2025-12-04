@@ -33,7 +33,7 @@ const handleValidationErrors = (req, res, next) => {
   return next();
 };
 
-router.use(authenticateToken, requireRole('hotel_provider'));
+router.use(authenticateToken, requireRole('hotel_provider', 'agent'));
 
 router.get('/summary', summaryValidation, handleValidationErrors, getDashboardSummary);
 router.get('/rooms', inventoryValidation, handleValidationErrors, getRoomInventory);
@@ -44,6 +44,12 @@ router.get('/rooms/:propertyId/availability', availabilityValidation, handleVali
 router.get('/analytics', summaryValidation, handleValidationErrors, getHotelAnalytics);
 
 export default router;
+
+
+
+
+
+
 
 
 
