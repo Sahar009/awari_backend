@@ -54,8 +54,25 @@ export const uploadSinglePropertyMedia = upload.single('media');
  */
 export const processPropertyUploadedFiles = async (req, res, next) => {
   try {
+    console.log('\n📁 [UPLOAD MIDDLEWARE] ========== PROCESSING UPLOADED FILES ==========');
+    console.log('📁 [UPLOAD MIDDLEWARE] Has req.files:', !!req.files);
+    console.log('📁 [UPLOAD MIDDLEWARE] Has req.file:', !!req.file);
+    console.log('📁 [UPLOAD MIDDLEWARE] Content-Type:', req.headers['content-type']);
+    console.log('📁 [UPLOAD MIDDLEWARE] Content-Length:', req.headers['content-length']);
+    
     if (!req.files && !req.file) {
+      console.log('⚠️ [UPLOAD MIDDLEWARE] No files found, continuing...');
       return next();
+    }
+    
+    if (req.files) {
+      console.log('📁 [UPLOAD MIDDLEWARE] Files received:', Object.keys(req.files));
+      Object.entries(req.files).forEach(([fieldName, files]) => {
+        console.log(`📁 [UPLOAD MIDDLEWARE] ${fieldName}: ${files.length} file(s)`);
+        files.forEach((file, index) => {
+          console.log(`  - File ${index + 1}: ${file.originalname} (${file.mimetype}, ${file.size} bytes)`);
+        });
+      });
     }
 
     const uploadResults = {
@@ -67,8 +84,12 @@ export const processPropertyUploadedFiles = async (req, res, next) => {
 
     // Process multiple files (from uploadPropertyMedia)
     if (req.files) {
+      console.log('📤 [UPLOAD MIDDLEWARE] Processing files for Cloudinary upload...');
       for (const [fieldName, files] of Object.entries(req.files)) {
+        console.log(`📤 [UPLOAD MIDDLEWARE] Processing ${fieldName} field with ${files.length} file(s)`);
         for (const file of files) {
+          console.log(`📤 [UPLOAD MIDDLEWARE] Uploading: ${file.originalname} (${file.mimetype}, ${file.size} bytes)`);
+          
           const uploadOptions = {
             folder: `properties/${fieldName}`,
             resource_type: 'auto',
@@ -87,11 +108,15 @@ export const processPropertyUploadedFiles = async (req, res, next) => {
 
           uploadOptions.mimeType = file.mimetype;
           
+          console.log(`📤 [UPLOAD MIDDLEWARE] Uploading to Cloudinary: ${file.originalname}`);
           const result = await uploadToCloudinary(file.buffer, uploadOptions);
           
           if (!result.success || !result.data) {
+            console.error(`❌ [UPLOAD MIDDLEWARE] Cloudinary upload failed: ${file.originalname}`);
             throw new Error(`Failed to upload ${file.originalname}: ${result.error || 'Unknown error'}`);
           }
+          
+          console.log(`✅ [UPLOAD MIDDLEWARE] Cloudinary upload successful: ${file.originalname}`);
           
           const mediaData = {
             ...result.data,  // This contains secure_url, public_id, etc.
@@ -152,9 +177,17 @@ export const processPropertyUploadedFiles = async (req, res, next) => {
     // Store results in request object
     req.uploadResults = uploadResults;
 
+    console.log('✅ [UPLOAD MIDDLEWARE] ========== FILES PROCESSED SUCCESSFULLY ==========');
+    console.log('✅ [UPLOAD MIDDLEWARE] Total images:', uploadResults.images.length);
+    console.log('✅ [UPLOAD MIDDLEWARE] Total videos:', uploadResults.videos.length);
+    console.log('✅ [UPLOAD MIDDLEWARE] Total documents:', uploadResults.documents.length);
+    console.log('✅ [UPLOAD MIDDLEWARE] Total media:', uploadResults.media.length);
+
     next();
   } catch (error) {
-    console.error('Error processing uploaded files:', error);
+    console.error('\n❌ [UPLOAD MIDDLEWARE] ========== FILE PROCESSING ERROR ==========');
+    console.error('❌ [UPLOAD MIDDLEWARE] Error:', error.message);
+    console.error('❌ [UPLOAD MIDDLEWARE] Stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Error processing uploaded files',
@@ -167,7 +200,18 @@ export const processPropertyUploadedFiles = async (req, res, next) => {
  * Error handler for multer-specific errors
  */
 export const handlePropertyUploadError = (error, req, res, next) => {
+  if (error) {
+    console.error('\n❌ [UPLOAD ERROR HANDLER] ========== UPLOAD ERROR ==========');
+    console.error('❌ [UPLOAD ERROR HANDLER] Error type:', error.constructor.name);
+    console.error('❌ [UPLOAD ERROR HANDLER] Error message:', error.message);
+    console.error('❌ [UPLOAD ERROR HANDLER] Error code:', error.code);
+    console.error('❌ [UPLOAD ERROR HANDLER] Request method:', req.method);
+    console.error('❌ [UPLOAD ERROR HANDLER] Request URL:', req.originalUrl);
+    console.error('❌ [UPLOAD ERROR HANDLER] Content-Type:', req.headers['content-type']);
+  }
+  
   if (error instanceof multer.MulterError) {
+    console.error('❌ [UPLOAD ERROR HANDLER] Multer error detected:', error.code);
     let message = 'File upload error';
     
     switch (error.code) {
@@ -194,7 +238,7 @@ export const handlePropertyUploadError = (error, req, res, next) => {
     });
   }
 
-  if (error.message.includes('File type')) {
+  if (error && error.message && error.message.includes('File type')) {
     return res.status(400).json({
       success: false,
       message: error.message

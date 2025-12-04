@@ -139,12 +139,15 @@ class PropertyService {
           {
             model: User,
             as: 'owner',
-            attributes: ['id', 'firstName', 'lastName', 'email', 'phone']
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl'],
+            paranoid: false
           },
           {
             model: User,
             as: 'agent',
-            attributes: ['id', 'firstName', 'lastName', 'email', 'phone']
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl'],
+            required: false,
+            paranoid: false
           },
           {
             model: PropertyMedia,
@@ -265,12 +268,15 @@ class PropertyService {
           {
             model: User,
             as: 'owner',
-            attributes: ['id', 'firstName', 'lastName', 'email', 'phone']
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl'],
+            paranoid: false // Include soft-deleted owners to check their status
           },
           {
             model: User,
             as: 'agent',
-            attributes: ['id', 'firstName', 'lastName', 'email', 'phone']
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl'],
+            required: false,
+            paranoid: false // Include soft-deleted agents to check their status
           },
           {
             model: PropertyMedia,
@@ -328,12 +334,15 @@ class PropertyService {
           {
             model: User,
             as: 'owner',
-            attributes: ['id', 'firstName', 'lastName', 'email']
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl'],
+            paranoid: false // Include soft-deleted owners to check their status
           },
           {
             model: User,
             as: 'agent',
-            attributes: ['id', 'firstName', 'lastName', 'email']
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl'],
+            required: false,
+            paranoid: false // Include soft-deleted agents to check their status
           },
           {
             model: PropertyMedia,
@@ -450,12 +459,15 @@ class PropertyService {
           {
             model: User,
             as: 'owner',
-            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl', 'status'],
+            paranoid: false // Include soft-deleted owners to check their status
           },
           {
             model: User,
             as: 'agent',
-            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl', 'status'],
+            required: false,
+            paranoid: false // Include soft-deleted agents to check their status
           },
           {
             model: PropertyMedia,
@@ -466,6 +478,34 @@ class PropertyService {
           }
         ]
       });
+      
+      // Check if owner exists but wasn't loaded (might be soft-deleted)
+      if (!property) {
+        throw new Error('Property not found');
+      }
+      
+      if (!property.owner && property.ownerId) {
+        const ownerCheck = await User.findByPk(property.ownerId, {
+          paranoid: false,
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl', 'status', 'deletedAt']
+        });
+        
+        if (ownerCheck) {
+          if (ownerCheck.deletedAt) {
+            console.warn('⚠️ [PROPERTY SERVICE] Property owner is soft-deleted:', {
+              slug,
+              ownerId: property.ownerId,
+              deletedAt: ownerCheck.deletedAt
+            });
+          }
+          property.owner = ownerCheck;
+        } else {
+          console.error('❌ [PROPERTY SERVICE] Property owner not found in database:', {
+            slug,
+            ownerId: property.ownerId
+          });
+        }
+      }
 
       if (!property) {
         throw new Error('Property not found');
@@ -530,12 +570,15 @@ class PropertyService {
           {
             model: User,
             as: 'owner',
-            attributes: ['id', 'firstName', 'lastName', 'email']
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl'],
+            paranoid: false
           },
           {
             model: User,
             as: 'agent',
-            attributes: ['id', 'firstName', 'lastName', 'email']
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl'],
+            required: false,
+            paranoid: false
           },
           {
             model: PropertyMedia,
@@ -756,17 +799,22 @@ class PropertyService {
           {
             model: User,
             as: 'owner',
-            attributes: ['id', 'firstName', 'lastName', 'email']
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl'],
+            paranoid: false
           },
           {
             model: User,
             as: 'agent',
-            attributes: ['id', 'firstName', 'lastName', 'email']
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl'],
+            required: false,
+            paranoid: false
           },
           {
             model: User,
             as: 'approver',
-            attributes: ['id', 'firstName', 'lastName', 'email']
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl'],
+            required: false,
+            paranoid: false
           }
         ]
       });
