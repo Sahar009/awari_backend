@@ -759,20 +759,53 @@ class AuthService {
    */
   async updateProfile(userId, updateData) {
     try {
+      console.log('🔍 [AUTH SERVICE] Updating profile for user:', userId);
+      console.log('🔍 [AUTH SERVICE] Update data:', JSON.stringify(updateData, null, 2));
+      
       const user = await User.findByPk(userId);
 
       if (!user) {
+        console.error('❌ [AUTH SERVICE] User not found:', userId);
         throw new Error('User not found');
       }
 
-      const { passwordHash, email, role, status, emailVerificationCode, passwordResetToken, accountDeletionToken, ...safeUpdateData } = updateData;
+      console.log('✅ [AUTH SERVICE] User found:', user.email);
+
+      // Remove sensitive fields that shouldn't be updated via profile update
+      const { 
+        passwordHash, 
+        email, 
+        role, 
+        status, 
+        emailVerificationCode, 
+        passwordResetToken, 
+        accountDeletionToken,
+        avatar, // Handle avatar separately if needed
+        ...safeUpdateData 
+      } = updateData;
+
+      console.log('📝 [AUTH SERVICE] Safe update data:', JSON.stringify(safeUpdateData, null, 2));
 
       await user.update(safeUpdateData);
+      
+      // Reload user to get updated data
+      await user.reload();
 
-      const { passwordHash: _, emailVerificationCode: __, passwordResetToken: ___, accountDeletionToken: ____, ...userWithoutPassword } = user.toJSON();
+      const { 
+        passwordHash: _, 
+        emailVerificationCode: __, 
+        passwordResetToken: ___, 
+        accountDeletionToken: ____, 
+        ...userWithoutPassword 
+      } = user.toJSON();
 
+      console.log('✅ [AUTH SERVICE] Profile updated successfully');
       return userWithoutPassword;
     } catch (error) {
+      console.error('❌ [AUTH SERVICE] Error updating profile:', error);
+      console.error('❌ [AUTH SERVICE] Error name:', error.name);
+      console.error('❌ [AUTH SERVICE] Error message:', error.message);
+      console.error('❌ [AUTH SERVICE] Error stack:', error.stack);
       throw error;
     }
   }

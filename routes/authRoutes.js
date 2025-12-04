@@ -8,6 +8,25 @@ import {
   changePasswordValidation,
   registerDeviceTokenValidation
 } from '../validations/authValidation.js';
+import multer from 'multer';
+import { uploadToCloudinary } from '../config/cloudinary.js';
+
+// Configure multer for avatar uploads
+const avatarStorage = multer.memoryStorage();
+const avatarUpload = multer({
+  storage: avatarStorage,
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`File type ${file.mimetype} is not allowed. Allowed types: ${allowedTypes.join(', ')}`), false);
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  }
+});
 
 const router = express.Router();
 
@@ -731,7 +750,81 @@ router.get('/profile', authenticateToken, authController.getProfile);
  *       500:
  *         description: Internal server error
  * */
-router.put('/profile', authenticateToken, updateProfileValidation, authController.updateProfile);
+// Middleware to handle avatar upload and process it
+const handleAvatarUpload = async (req, res, next) => {
+  try {
+    // If there's an avatar file, upload it to Cloudinary
+    if (req.file) {
+      console.log('📤 [AUTH ROUTE] Processing avatar upload');
+      const uploadOptions = {
+        folder: 'awari-profiles/avatars',
+        resource_type: 'image',
+        quality: 80,
+        fetch_format: 'auto'
+      };
+
+      const result = await uploadToCloudinary(req.file.buffer, {
+        ...uploadOptions,
+        mimeType: req.file.mimetype
+      });
+      
+      if (result.success) {
+        // Add avatarUrl to req.body so it can be processed by the controller
+        req.body.avatarUrl = result.data.secure_url;
+        console.log('✅ [AUTH ROUTE] Avatar uploaded successfully:', result.data.secure_url);
+      } else {
+        console.error('❌ [AUTH ROUTE] Avatar upload failed:', result.error);
+        return res.status(400).json({
+          success: false,
+          message: 'Avatar upload failed',
+          error: result.error
+        });
+      }
+    }
+    next();
+  } catch (error) {
+    console.error('❌ [AUTH ROUTE] Error processing avatar:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error processing avatar',
+      error: error.message
+    });
+  }
+};
+
+// Error handler for multer
+const handleMulterError = (error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'Avatar file too large. Maximum size is 5MB.'
+      });
+    }
+    if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({
+        success: false,
+        message: 'Unexpected file field.'
+      });
+    }
+  }
+  if (error.message && error.message.includes('File type')) {
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+  next(error);
+};
+
+router.put('/profile', 
+  authenticateToken, 
+  avatarUpload.single('avatar'),
+  handleMulterError,
+  handleAvatarUpload,
+  updateProfileValidation, 
+  authController.updateProfile
+);
 
 /**
  * @swagger

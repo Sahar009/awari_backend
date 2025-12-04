@@ -627,9 +627,17 @@ class AuthController {
    */
   async updateProfile(req, res) {
     try {
+      console.log('📝 [AUTH CONTROLLER] Update profile request received');
+      console.log('📝 [AUTH CONTROLLER] User ID:', req.user?.id);
+      console.log('📝 [AUTH CONTROLLER] Request body:', JSON.stringify(req.body, null, 2));
+      console.log('📝 [AUTH CONTROLLER] Content-Type:', req.headers['content-type']);
+      console.log('📝 [AUTH CONTROLLER] Has files:', !!req.files);
+      console.log('📝 [AUTH CONTROLLER] Files:', req.files);
+      
       // Check for validation errors
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
+        console.error('❌ [AUTH CONTROLLER] Validation errors:', errors.array());
         return res.status(400).json({
           success: false,
           message: 'Validation failed',
@@ -638,8 +646,19 @@ class AuthController {
       }
 
       const userId = req.user.id;
-      const updateData = req.body;
+      const updateData = { ...req.body };
+      
+      // Remove avatar field if it exists (we use avatarUrl instead)
+      if (updateData.avatar) {
+        delete updateData.avatar;
+      }
+      
+      console.log('📝 [AUTH CONTROLLER] Update data:', JSON.stringify(updateData, null, 2));
+      
       const updatedUser = await authService.updateProfile(userId, updateData);
+      
+      console.log('✅ [AUTH CONTROLLER] Profile updated successfully');
+      console.log('✅ [AUTH CONTROLLER] Updated user:', JSON.stringify(updatedUser, null, 2));
 
       res.status(200).json({
         success: true,
@@ -647,7 +666,10 @@ class AuthController {
         data: updatedUser
       });
     } catch (error) {
-      console.error('Update profile error:', error);
+      console.error('❌ [AUTH CONTROLLER] Update profile error:', error);
+      console.error('❌ [AUTH CONTROLLER] Error name:', error.name);
+      console.error('❌ [AUTH CONTROLLER] Error message:', error.message);
+      console.error('❌ [AUTH CONTROLLER] Error stack:', error.stack);
       
       if (error.message === 'User not found') {
         return res.status(404).json({

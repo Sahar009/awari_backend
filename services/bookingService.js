@@ -10,6 +10,7 @@ import {
 import { sendTemplateNotification } from './notificationService.js';
 import { sendEmail } from '../modules/notifications/email.js';
 import Payment from '../schema/Payment.js';
+import sequelize from '../database/db.js';
 
 /**
  * Create a new booking
@@ -217,10 +218,53 @@ export const createBooking = async (userId, bookingData) => {
       ownerEmail: property.owner.email
     });
 
-    // Create booking
-    console.log('📝 [BOOKING SERVICE] Creating booking with data:', {
+    // Use transaction to ensure atomicity and prevent race conditions
+    const transaction = await sequelize.transaction();
+    
+    try {
+      // Re-verify user exists within transaction to prevent race conditions
+      console.log('🔍 [BOOKING SERVICE] Re-verifying user within transaction:', userId);
+      const userInTransaction = await User.findByPk(userId, { 
+        paranoid: true,
+        attributes: ['id', 'email', 'status'],
+        transaction
+      });
+      
+      if (!userInTransaction) {
+        console.error('❌ [BOOKING SERVICE] User not found within transaction:', userId);
+        await transaction.rollback();
+        
+        // Check if user is soft-deleted
+        const userWithoutParanoid = await User.findByPk(userId, { 
+          paranoid: false,
+          attributes: ['id', 'email', 'deletedAt', 'status']
+        });
+        
+        if (userWithoutParanoid && userWithoutParanoid.deletedAt) {
+          return {
+            success: false,
+            message: 'Your account has been deleted. Please contact support.',
+            statusCode: 403
+          };
+        }
+        
+        return {
+          success: false,
+          message: 'User account not found. Please log in again.',
+          statusCode: 404
+        };
+      }
+      
+      console.log('✅ [BOOKING SERVICE] User verified within transaction:', {
+        id: userInTransaction.id,
+        email: userInTransaction.email,
+        status: userInTransaction.status
+      });
+
+      // Create booking
+      console.log('📝 [BOOKING SERVICE] Creating booking with data:', {
         userId,
-      propertyId,
+        propertyId,
         ownerId: property.owner.id,
         bookingType,
         checkInDate,
@@ -229,19 +273,17 @@ export const createBooking = async (userId, bookingData) => {
         inspectionTime,
         numberOfNights,
         numberOfGuests: numberOfGuests || 1,
-      basePrice: Number(basePrice),
-      totalPrice: Number(totalPrice),
+        basePrice: Number(basePrice),
+        totalPrice: Number(totalPrice),
         currency,
-      serviceFee: serviceFee ? Number(serviceFee) : 0,
-      taxAmount: taxAmount ? Number(taxAmount) : 0,
-      discountAmount: discountAmount ? Number(discountAmount) : 0
-    });
-    
-    let booking;
-    try {
+        serviceFee: serviceFee ? Number(serviceFee) : 0,
+        taxAmount: taxAmount ? Number(taxAmount) : 0,
+        discountAmount: discountAmount ? Number(discountAmount) : 0
+      });
+      
       const bookingPayload = {
         propertyId,
-        userId,
+        userId: userInTransaction.id, // Use the verified user ID from transaction
         ownerId: property.owner.id,
         bookingType,
         checkInDate: checkInDate || null,
@@ -265,10 +307,55 @@ export const createBooking = async (userId, bookingData) => {
       };
       
       console.log('💾 [BOOKING SERVICE] Booking payload:', JSON.stringify(bookingPayload, null, 2));
-      booking = await Booking.create(bookingPayload);
+      const booking = await Booking.create(bookingPayload, { transaction });
       console.log('✅ [BOOKING SERVICE] Booking created successfully:', booking.id);
-      console.log('✅ [BOOKING SERVICE] Created booking data:', JSON.stringify(booking.toJSON(), null, 2));
+      
+      // Commit transaction
+      await transaction.commit();
+      console.log('✅ [BOOKING SERVICE] Transaction committed successfully');
+      
+      // Fetch the complete booking with relations
+      const completeBooking = await Booking.findByPk(booking.id, {
+        include: [
+          {
+            model: Property,
+            as: 'property',
+            include: [
+              {
+                model: User,
+                as: 'owner',
+                attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+              }
+            ]
+          },
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+          },
+          {
+            model: User,
+            as: 'owner',
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+          }
+        ]
+      });
+      
+      console.log('✅ [BOOKING SERVICE] Complete booking data:', JSON.stringify(completeBooking?.toJSON(), null, 2));
+      
+      return {
+        success: true,
+        message: 'Booking created successfully',
+        data: { booking: completeBooking },
+        statusCode: 201
+      };
     } catch (error) {
+      // Rollback transaction on error
+      if (transaction && !transaction.finished) {
+        await transaction.rollback();
+        console.error('❌ [BOOKING SERVICE] Transaction rolled back due to error');
+      }
+      
       console.error('❌ [BOOKING SERVICE] Error creating booking:', error);
       console.error('❌ [BOOKING SERVICE] Error name:', error.name);
       console.error('❌ [BOOKING SERVICE] Error message:', error.message);
@@ -294,22 +381,42 @@ export const createBooking = async (userId, bookingData) => {
         
         // If it's the userId foreign key, verify user exists
         if (error.fields && error.fields.includes('userId')) {
+          console.error('🔍 [BOOKING SERVICE] userId foreign key constraint failed');
+          console.error('🔍 [BOOKING SERVICE] Attempted userId:', userId);
+          console.error('🔍 [BOOKING SERVICE] userId type:', typeof userId);
+          console.error('🔍 [BOOKING SERVICE] userId length:', userId?.length);
+          
           const userCheck = await User.findByPk(userId, { 
             paranoid: false,
             attributes: ['id', 'email', 'deletedAt', 'status']
           });
           
           if (!userCheck) {
+            console.error('❌ [BOOKING SERVICE] User does not exist in database');
             return {
               success: false,
               message: 'User account not found. Please log in again.',
               statusCode: 404
             };
           } else if (userCheck.deletedAt) {
+            console.error('❌ [BOOKING SERVICE] User is soft-deleted:', userCheck.deletedAt);
             return {
               success: false,
               message: 'Your account has been deleted. Please contact support.',
               statusCode: 403
+            };
+          } else {
+            console.error('⚠️ [BOOKING SERVICE] User exists but foreign key constraint failed');
+            console.error('⚠️ [BOOKING SERVICE] User ID from DB:', userCheck.id);
+            console.error('⚠️ [BOOKING SERVICE] User ID type from DB:', typeof userCheck.id);
+            console.error('⚠️ [BOOKING SERVICE] User ID length from DB:', userCheck.id?.length);
+            console.error('⚠️ [BOOKING SERVICE] IDs match:', userCheck.id === userId);
+            console.error('⚠️ [BOOKING SERVICE] IDs match (string):', String(userCheck.id) === String(userId));
+            
+            return {
+              success: false,
+              message: 'User account validation failed. Please log out and log in again.',
+              statusCode: 400
             };
           }
         }
@@ -358,85 +465,11 @@ export const createBooking = async (userId, bookingData) => {
       // Re-throw other errors to be caught by outer catch
       throw error;
     }
-
-    // Fetch the created booking with relations
-    console.log('🔍 [BOOKING SERVICE] Fetching created booking with relations:', booking.id);
-    let createdBooking;
-    try {
-      createdBooking = await Booking.findByPk(booking.id, {
-      include: [
-        {
-          model: Property,
-          as: 'property',
-          include: [
-            {
-              model: User,
-              as: 'owner',
-              attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
-            }
-          ]
-        },
-        {
-          model: User,
-          as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
-        },
-        {
-          model: User,
-          as: 'owner',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
-        }
-      ]
-    });
-
-      if (!createdBooking) {
-        console.error('❌ [BOOKING SERVICE] Created booking not found after creation:', booking.id);
-        // Return the booking we just created even without relations
-    return {
-      success: true,
-      message: 'Booking created successfully',
-          data: { booking: booking },
-          statusCode: 201
-        };
-      }
-      
-      console.log('✅ [BOOKING SERVICE] Booking fetched with relations:', createdBooking.id);
-    } catch (fetchError) {
-      console.error('❌ [BOOKING SERVICE] Error fetching created booking:', fetchError);
-      console.error('❌ [BOOKING SERVICE] Fetch error details:', {
-        name: fetchError.name,
-        message: fetchError.message,
-        stack: fetchError.stack
-      });
-      // Return the booking we just created even if we can't fetch relations
-      return {
-        success: true,
-        message: 'Booking created successfully',
-        data: { booking: booking },
-        statusCode: 201
-      };
-    }
-
-    // Return response in format expected by frontend: { success, message, data: { booking } }
-    console.log('✅ [BOOKING SERVICE] Returning success response');
-    return {
-      success: true,
-      message: 'Booking created successfully',
-      data: {
-        booking: createdBooking
-      },
-      statusCode: 201
-    };
-  } catch (error) {
-    console.error('❌ [BOOKING SERVICE] Unexpected error creating booking:', error);
-    console.error('❌ [BOOKING SERVICE] Error name:', error.name);
-    console.error('❌ [BOOKING SERVICE] Error message:', error.message);
-    console.error('❌ [BOOKING SERVICE] Error stack:', error.stack);
-    console.error('❌ [BOOKING SERVICE] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+  } catch (outerError) {
+    console.error('❌ [BOOKING SERVICE] Outer catch error:', outerError);
     return {
       success: false,
-      message: error.message || 'Failed to create booking',
-      error: error.message,
+      message: outerError.message || 'Failed to create booking',
       statusCode: 500
     };
   }
