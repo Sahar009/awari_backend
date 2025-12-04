@@ -3,6 +3,7 @@ import Property from '../schema/Property.js';
 import PropertyMedia from '../schema/PropertyMedia.js';
 import User from '../schema/User.js';
 import { Op } from 'sequelize';
+import sequelize from '../database/db.js';
 
 /**
  * Add a property to user's favorites
@@ -12,10 +13,28 @@ import { Op } from 'sequelize';
  * @returns {Object} Result object
  */
 export const addToFavorites = async (userId, propertyId, notes = null) => {
+  const transaction = await sequelize.transaction();
   try {
+    // Verify user exists and is active
+    const user = await User.findByPk(userId, {
+      paranoid: true,
+      attributes: ['id', 'email', 'status'],
+      transaction
+    });
+
+    if (!user) {
+      await transaction.rollback();
+      return {
+        success: false,
+        message: 'User account not found. Please log in again.',
+        statusCode: 404
+      };
+    }
+
     // Check if property exists
-    const property = await Property.findByPk(propertyId);
+    const property = await Property.findByPk(propertyId, { transaction });
     if (!property) {
+      await transaction.rollback();
       return {
         success: false,
         message: 'Property not found',
@@ -29,10 +48,12 @@ export const addToFavorites = async (userId, propertyId, notes = null) => {
         userId,
         propertyId,
         isActive: true
-      }
+      },
+      transaction
     });
 
     if (existingFavorite) {
+      await transaction.rollback();
       return {
         success: false,
         message: 'Property is already in your favorites',
@@ -40,13 +61,31 @@ export const addToFavorites = async (userId, propertyId, notes = null) => {
       };
     }
 
-    // Create new favorite
+    // Re-verify user within transaction
+    const userInTransaction = await User.findByPk(userId, {
+      paranoid: true,
+      attributes: ['id'],
+      transaction
+    });
+
+    if (!userInTransaction) {
+      await transaction.rollback();
+      return {
+        success: false,
+        message: 'User account not found. Please log in again.',
+        statusCode: 404
+      };
+    }
+
+    // Create new favorite within transaction
     const favorite = await Favorite.create({
-      userId,
+      userId: userInTransaction.id,
       propertyId,
       notes,
       isActive: true
-    });
+    }, { transaction });
+
+    await transaction.commit();
 
     return {
       success: true,
@@ -55,7 +94,22 @@ export const addToFavorites = async (userId, propertyId, notes = null) => {
       statusCode: 201
     };
   } catch (error) {
-    console.error('Error adding to favorites:', error);
+    if (transaction && !transaction.finished) {
+      await transaction.rollback();
+      console.error('❌ [FAVORITE SERVICE] Transaction rolled back due to error');
+    }
+    console.error('❌ [FAVORITE SERVICE] Error adding to favorites:', error);
+    
+    // Handle foreign key constraint errors
+    if (error.name === 'SequelizeForeignKeyConstraintError') {
+      return {
+        success: false,
+        message: 'User account not found. Please log in again.',
+        error: error.message,
+        statusCode: 404
+      };
+    }
+    
     return {
       success: false,
       message: 'Failed to add property to favorites',

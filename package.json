@@ -12,7 +12,8 @@
     "migrate:undo": "sequelize-cli db:migrate:undo",
     "seed": "sequelize-cli db:seed:all",
     "seed:undo": "sequelize-cli db:seed:undo:all",
-    "create-tables": "node scripts/create-tables.js"
+    "create-tables": "node scripts/create-tables.js",
+    "create-demo-user": "node scripts/createDemoUser.js"
   },
   "keywords": [
     "real-estate",

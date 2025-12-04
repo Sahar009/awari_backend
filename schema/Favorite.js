@@ -1,5 +1,7 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../database/db.js';
+import User from './User.js';
+import Property from './Property.js';
 
 const Favorite = sequelize.define('Favorite', {
   id: {
@@ -11,7 +13,7 @@ const Favorite = sequelize.define('Favorite', {
     type: DataTypes.UUID,
     allowNull: false,
     references: {
-      model: 'Users',
+      model: User,
       key: 'id'
     }
   },
@@ -19,7 +21,7 @@ const Favorite = sequelize.define('Favorite', {
     type: DataTypes.UUID,
     allowNull: false,
     references: {
-      model: 'properties',
+      model: Property,
       key: 'id'
     }
   },
