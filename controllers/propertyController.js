@@ -10,9 +10,18 @@ class PropertyController {
    */
   async createProperty(req, res) {
     try {
+      console.log('\n🏠 [PROPERTY CONTROLLER] ========== CREATE PROPERTY REQUEST ==========');
+      console.log('🏠 [PROPERTY CONTROLLER] Request method:', req.method);
+      console.log('🏠 [PROPERTY CONTROLLER] Request URL:', req.originalUrl);
+      console.log('🏠 [PROPERTY CONTROLLER] Content-Type:', req.headers['content-type']);
+      console.log('🏠 [PROPERTY CONTROLLER] Content-Length:', req.headers['content-length']);
+      console.log('🏠 [PROPERTY CONTROLLER] Has files:', !!req.files);
+      console.log('🏠 [PROPERTY CONTROLLER] Files count:', req.files?.length || 0);
+      
       // Check for validation errors
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
+        console.error('❌ [PROPERTY CONTROLLER] Validation errors:', errors.array());
         return res.status(400).json({
           success: false,
           message: 'Validation failed',
@@ -21,6 +30,7 @@ class PropertyController {
       }
 
       if (!req.user) {
+        console.error('❌ [PROPERTY CONTROLLER] User not authenticated');
         return res.status(401).json({
           success: false,
           message: 'User not authenticated. Please login first.'
@@ -29,6 +39,7 @@ class PropertyController {
 
       // Check if user ID exists
       if (!req.user.id) {
+        console.error('❌ [PROPERTY CONTROLLER] User ID not found');
         return res.status(401).json({
           success: false,
           message: 'User ID not found. Please login again.'
@@ -39,17 +50,53 @@ class PropertyController {
       const propertyData = req.body;
       const uploadResults = req.uploadResults || null;
 
-      console.log('Creating property for user ID:', ownerId);
-      console.log('User object:', { id: req.user.id, email: req.user.email, role: req.user.role });
+      console.log('✅ [PROPERTY CONTROLLER] User authenticated:', {
+        id: req.user.id,
+        email: req.user.email,
+        role: req.user.role
+      });
+      console.log('📝 [PROPERTY CONTROLLER] Property data received:', {
+        title: propertyData.title,
+        propertyType: propertyData.propertyType,
+        listingType: propertyData.listingType,
+        city: propertyData.city,
+        state: propertyData.state,
+        price: propertyData.price,
+        hasImages: uploadResults?.media?.length || 0,
+        imageCount: uploadResults?.media?.length || 0
+      });
+      console.log('📝 [PROPERTY CONTROLLER] Upload results:', {
+        hasUploadResults: !!uploadResults,
+        mediaCount: uploadResults?.media?.length || 0,
+        mediaUrls: uploadResults?.media?.map(m => m.secure_url?.substring(0, 50) + '...') || []
+      });
+      console.log('📝 [PROPERTY CONTROLLER] Full property data keys:', Object.keys(propertyData));
+      console.log('📝 [PROPERTY CONTROLLER] Array fields:', {
+        features: Array.isArray(propertyData.features) ? propertyData.features.length : 'not array',
+        amenities: Array.isArray(propertyData.amenities) ? propertyData.amenities.length : 'not array',
+        roomTypes: Array.isArray(propertyData.roomTypes) ? propertyData.roomTypes.length : 'not array',
+        hotelAmenities: Array.isArray(propertyData.hotelAmenities) ? propertyData.hotelAmenities.length : 'not array'
+      });
 
+      console.log('🔄 [PROPERTY CONTROLLER] Calling propertyService.createProperty...');
       const result = await propertyService.createProperty(ownerId, propertyData, uploadResults);
+      console.log('✅ [PROPERTY CONTROLLER] Property created successfully:', {
+        propertyId: result.data?.id,
+        title: result.data?.title,
+        status: result.data?.status
+      });
 
       res.status(201).json(result);
     } catch (error) {
-      console.error('Property creation error:', error);
+      console.error('\n❌ [PROPERTY CONTROLLER] ========== PROPERTY CREATION ERROR ==========');
+      console.error('❌ [PROPERTY CONTROLLER] Error name:', error.name);
+      console.error('❌ [PROPERTY CONTROLLER] Error message:', error.message);
+      console.error('❌ [PROPERTY CONTROLLER] Error stack:', error.stack);
+      console.error('❌ [PROPERTY CONTROLLER] Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
       
       // Handle foreign key constraint errors specifically
       if (error.message && error.message.includes('foreign key constraint fails')) {
+        console.error('❌ [PROPERTY CONTROLLER] Foreign key constraint error detected');
         return res.status(400).json({
           success: false,
           message: 'Invalid user ID. Please logout and login again to refresh your session.'
@@ -58,7 +105,7 @@ class PropertyController {
 
       res.status(400).json({
         success: false,
-        message: error.message
+        message: error.message || 'Failed to create property'
       });
     }
   }

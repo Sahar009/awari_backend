@@ -13,20 +13,40 @@ class PropertyService {
    */
   async createProperty(ownerId, propertyData, uploadResults = null) {
     try {
+      console.log('\n🏗️ [PROPERTY SERVICE] ========== CREATE PROPERTY ==========');
+      console.log('🏗️ [PROPERTY SERVICE] Owner ID:', ownerId);
+      console.log('🏗️ [PROPERTY SERVICE] Property title:', propertyData.title);
+      console.log('🏗️ [PROPERTY SERVICE] Property type:', propertyData.propertyType);
+      console.log('🏗️ [PROPERTY SERVICE] Listing type:', propertyData.listingType);
+      console.log('🏗️ [PROPERTY SERVICE] Has upload results:', !!uploadResults);
+      console.log('🏗️ [PROPERTY SERVICE] Upload media count:', uploadResults?.media?.length || 0);
+      
       // Check if owner exists
+      console.log('🔍 [PROPERTY SERVICE] Checking if owner exists...');
       const owner = await User.findByPk(ownerId);
       if (!owner) {
+        console.error('❌ [PROPERTY SERVICE] Owner not found:', ownerId);
         throw new Error('Property owner not found');
       }
+      console.log('✅ [PROPERTY SERVICE] Owner found:', {
+        id: owner.id,
+        email: owner.email,
+        status: owner.status
+      });
 
       // Generate slug from title
+      console.log('🔧 [PROPERTY SERVICE] Generating slug...');
       const slug = this.generateSlug(propertyData.title);
+      console.log('✅ [PROPERTY SERVICE] Generated slug:', slug);
 
       // Check if slug already exists
+      console.log('🔍 [PROPERTY SERVICE] Checking if slug exists...');
       const existingProperty = await Property.findOne({ where: { slug } });
       if (existingProperty) {
+        console.error('❌ [PROPERTY SERVICE] Slug already exists:', slug);
         throw new Error('A property with this title already exists');
       }
+      console.log('✅ [PROPERTY SERVICE] Slug is unique');
 
       // Prepare property data
       const propertyDataToCreate = {
@@ -84,14 +104,36 @@ class PropertyService {
       };
 
       // Create the property
+      console.log('🔄 [PROPERTY SERVICE] Creating property in database...');
+      console.log('📝 [PROPERTY SERVICE] Property data to create:', {
+        title: propertyDataToCreate.title,
+        propertyType: propertyDataToCreate.propertyType,
+        listingType: propertyDataToCreate.listingType,
+        price: propertyDataToCreate.price,
+        city: propertyDataToCreate.city,
+        state: propertyDataToCreate.state,
+        status: propertyDataToCreate.status || 'pending'
+      });
+      
       const property = await Property.create(propertyDataToCreate);
+      console.log('✅ [PROPERTY SERVICE] Property created in database:', {
+        id: property.id,
+        title: property.title,
+        status: property.status
+      });
 
       // Handle media uploads if provided
       if (uploadResults && uploadResults.media && uploadResults.media.length > 0) {
+        console.log('📸 [PROPERTY SERVICE] Adding property media...');
+        console.log('📸 [PROPERTY SERVICE] Media count:', uploadResults.media.length);
         await this.addPropertyMedia(property.id, uploadResults.media);
+        console.log('✅ [PROPERTY SERVICE] Media added successfully');
+      } else {
+        console.log('⚠️ [PROPERTY SERVICE] No media to add');
       }
 
       // Fetch the created property with relations
+      console.log('🔍 [PROPERTY SERVICE] Fetching created property with relations...');
       const createdProperty = await Property.findByPk(property.id, {
         include: [
           {
@@ -113,18 +155,36 @@ class PropertyService {
           }
         ]
       });
+      console.log('✅ [PROPERTY SERVICE] Property fetched with relations:', {
+        id: createdProperty.id,
+        hasOwner: !!createdProperty.owner,
+        hasAgent: !!createdProperty.agent,
+        mediaCount: createdProperty.media?.length || 0
+      });
 
+      console.log('✅ [PROPERTY SERVICE] ========== PROPERTY CREATED SUCCESSFULLY ==========');
       return {
         success: true,
         message: 'Property created successfully',
         data: createdProperty
       };
     } catch (error) {
+      console.error('\n❌ [PROPERTY SERVICE] ========== CREATE PROPERTY ERROR ==========');
+      console.error('❌ [PROPERTY SERVICE] Error name:', error.name);
+      console.error('❌ [PROPERTY SERVICE] Error message:', error.message);
+      console.error('❌ [PROPERTY SERVICE] Error stack:', error.stack);
+      
       // Clean up uploaded files if property creation fails
       if (uploadResults && uploadResults.media) {
+        console.log('🧹 [PROPERTY SERVICE] Cleaning up uploaded files...');
         for (const media of uploadResults.media) {
           if (media.public_id) {
-            await deleteFromCloudinary(media.public_id);
+            try {
+              await deleteFromCloudinary(media.public_id);
+              console.log('✅ [PROPERTY SERVICE] Deleted file:', media.public_id);
+            } catch (cleanupError) {
+              console.error('❌ [PROPERTY SERVICE] Failed to delete file:', media.public_id, cleanupError);
+            }
           }
         }
       }
@@ -315,12 +375,15 @@ class PropertyService {
           {
             model: User,
             as: 'owner',
-            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl', 'status'],
+            paranoid: false // Include soft-deleted owners to check their status
           },
           {
             model: User,
             as: 'agent',
-            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl', 'status'],
+            required: false,
+            paranoid: false // Include soft-deleted agents to check their status
           },
           {
             model: PropertyMedia,
@@ -334,6 +397,32 @@ class PropertyService {
 
       if (!property) {
         throw new Error('Property not found');
+      }
+
+      // Check if owner exists but wasn't loaded (might be soft-deleted)
+      if (!property.owner && property.ownerId) {
+        const ownerCheck = await User.findByPk(property.ownerId, {
+          paranoid: false,
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl', 'status', 'deletedAt']
+        });
+        
+        if (ownerCheck) {
+          // If owner exists but is soft-deleted or inactive, still include it but log a warning
+          if (ownerCheck.deletedAt) {
+            console.warn('⚠️ [PROPERTY SERVICE] Property owner is soft-deleted:', {
+              propertyId,
+              ownerId: property.ownerId,
+              deletedAt: ownerCheck.deletedAt
+            });
+          }
+          // Attach owner to property even if soft-deleted (for display purposes)
+          property.owner = ownerCheck;
+        } else {
+          console.error('❌ [PROPERTY SERVICE] Property owner not found in database:', {
+            propertyId,
+            ownerId: property.ownerId
+          });
+        }
       }
 
       // Increment view count if requested

@@ -122,7 +122,8 @@ export const createBooking = async (userId, bookingData) => {
         {
           model: User,
           as: 'owner',
-          attributes: ['id', 'firstName', 'lastName', 'email']
+          attributes: ['id', 'firstName', 'lastName', 'email', 'status'],
+          paranoid: false // Include soft-deleted users to check their status
         }
       ]
     });
@@ -206,9 +207,52 @@ export const createBooking = async (userId, bookingData) => {
           ownerId: property.ownerId
         }
       });
+      
+      // Try to fetch owner directly to see if it exists but wasn't included
+      if (property.ownerId) {
+        const ownerCheck = await User.findByPk(property.ownerId, {
+          paranoid: false,
+          attributes: ['id', 'email', 'status', 'deletedAt']
+        });
+        
+        if (ownerCheck) {
+          if (ownerCheck.deletedAt) {
+            return {
+              success: false,
+              message: 'Property owner account has been deleted. This property is no longer available.',
+              statusCode: 400
+            };
+          }
+          if (ownerCheck.status !== 'active') {
+            return {
+              success: false,
+              message: `Property owner account is ${ownerCheck.status}. This property is currently unavailable.`,
+              statusCode: 400
+            };
+          }
+        }
+      }
+      
       return {
         success: false,
-        message: 'Property owner information is missing',
+        message: 'Property owner information is missing. Please contact support.',
+        statusCode: 400
+      };
+    }
+    
+    // Check if owner is soft-deleted or inactive
+    if (property.owner.deletedAt) {
+      return {
+        success: false,
+        message: 'Property owner account has been deleted. This property is no longer available.',
+        statusCode: 400
+      };
+    }
+    
+    if (property.owner.status !== 'active') {
+      return {
+        success: false,
+        message: `Property owner account is ${property.owner.status}. This property is currently unavailable.`,
         statusCode: 400
       };
     }
