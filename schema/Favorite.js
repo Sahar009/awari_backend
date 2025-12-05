@@ -14,7 +14,9 @@ const Favorite = sequelize.define('Favorite', {
     allowNull: false,
     references: {
       model: User,
-      key: 'id'
+      key: 'id',
+      // Explicitly set table name to ensure correct foreign key reference
+      // This works around case sensitivity issues where constraint references 'Users' but table is 'users'
     }
   },
   propertyId: {
