@@ -113,7 +113,7 @@ export const propertiesManagementValidation = [
     .withMessage('Invalid status filter'),
   query('listingType')
     .optional()
-    .isIn(['rent', 'sale', 'shortlet'])
+    .isIn(['rent', 'sale', 'shortlet', 'hotel'])
     .withMessage('Invalid listing type'),
   query('propertyType')
     .optional()
@@ -218,7 +218,7 @@ export const moderationListingsValidation = [
     .withMessage('status must be pending, rejected, archived, or flagged'),
   query('listingType')
     .optional()
-    .isIn(['rent', 'sale', 'shortlet'])
+    .isIn(['rent', 'sale', 'shortlet', 'hotel'])
     .withMessage('Invalid listing type'),
   query('search').optional().isString().isLength({ max: 200 }).withMessage('search must be a string')
 ];

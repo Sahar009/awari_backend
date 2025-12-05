@@ -25,7 +25,7 @@ export const createPropertyValidation = [
     .withMessage('Invalid property type'),
 
   body('listingType')
-    .isIn(['rent', 'sale', 'shortlet'])
+    .isIn(['rent', 'sale', 'shortlet', 'hotel'])
     .withMessage('Invalid listing type'),
 
   body('price')
@@ -324,7 +324,7 @@ export const updatePropertyValidation = [
 
   body('listingType')
     .optional()
-    .isIn(['rent', 'sale', 'shortlet'])
+    .isIn(['rent', 'sale', 'shortlet', 'hotel'])
     .withMessage('Invalid listing type'),
 
   body('price')
@@ -820,7 +820,7 @@ export const getOwnerPropertiesValidation = [
     .withMessage('Invalid property type filter'),
   query('listingType')
     .optional()
-    .isIn(['rent', 'sale', 'shortlet'])
+    .isIn(['rent', 'sale', 'shortlet', 'hotel'])
     .withMessage('Invalid listing type filter')
 ];
 

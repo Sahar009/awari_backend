@@ -55,7 +55,7 @@ const getFavoritesValidation = [
     .withMessage('Invalid property type'),
   query('listingType')
     .optional()
-    .isIn(['rent', 'sale', 'shortlet'])
+    .isIn(['rent', 'sale', 'shortlet', 'hotel'])
     .withMessage('Invalid listing type'),
   query('status')
     .optional()

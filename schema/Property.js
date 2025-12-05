@@ -55,7 +55,7 @@ const Property = sequelize.define('Property', {
     allowNull: false
   },
   listingType: {
-    type: DataTypes.ENUM('rent', 'sale', 'shortlet'),
+    type: DataTypes.ENUM('rent', 'sale', 'shortlet', 'hotel'),
     allowNull: false
   },
   status: {
