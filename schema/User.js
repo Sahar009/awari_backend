@@ -167,7 +167,7 @@ const User = sequelize.define('User', {
 }, {
   timestamps: true,
   paranoid: true, 
-  tableName: 'users', // Use lowercase to match foreign key constraint
+  tableName: 'Users', // Use capitalized to match the table with 37 users
   hooks: {
     beforeCreate: async (user) => {
       // Set email verification expiry to 10 minutes from now

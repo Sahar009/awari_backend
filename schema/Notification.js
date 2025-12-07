@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../database/db.js';
+import User from './User.js';
 
 const Notification = sequelize.define('Notification', {
   id: {
@@ -11,7 +12,7 @@ const Notification = sequelize.define('Notification', {
     type: DataTypes.UUID,
     allowNull: false,
     references: {
-      model: 'users',
+      model: User,
       key: 'id'
     }
   },

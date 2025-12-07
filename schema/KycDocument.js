@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../database/db.js';
+import User from './User.js';
 
 const KycDocument = sequelize.define('KycDocument', {
   id: {
@@ -11,7 +12,7 @@ const KycDocument = sequelize.define('KycDocument', {
     type: DataTypes.UUID,
     allowNull: false,
     references: {
-      model: 'users',
+      model: User,
       key: 'id'
     }
   },
@@ -44,7 +45,7 @@ const KycDocument = sequelize.define('KycDocument', {
     type: DataTypes.UUID,
     allowNull: true,
     references: {
-      model: 'users',
+      model: User,
       key: 'id'
     }
   },

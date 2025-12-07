@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../database/db.js';
+import User from './User.js';
 
 const Review = sequelize.define('Review', {
   id: {
@@ -11,7 +12,7 @@ const Review = sequelize.define('Review', {
     type: DataTypes.UUID,
     allowNull: false,
     references: {
-      model: 'Users',
+      model: User,
       key: 'id'
     }
   },
@@ -27,7 +28,7 @@ const Review = sequelize.define('Review', {
     type: DataTypes.UUID,
     allowNull: true,
     references: {
-      model: 'Users',
+      model: User,
       key: 'id'
     }
   },
@@ -125,7 +126,7 @@ const Review = sequelize.define('Review', {
     type: DataTypes.UUID,
     allowNull: true,
     references: {
-      model: 'Users',
+      model: User,
       key: 'id'
     }
   },

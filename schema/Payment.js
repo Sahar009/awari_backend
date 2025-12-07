@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../database/db.js';
+import User from './User.js';
 
 const Payment = sequelize.define('Payment', {
   id: {
@@ -11,7 +12,7 @@ const Payment = sequelize.define('Payment', {
     type: DataTypes.UUID,
     allowNull: false,
     references: {
-      model: 'users',
+      model: User,
       key: 'id'
     }
   },
@@ -114,7 +115,7 @@ const Payment = sequelize.define('Payment', {
     type: DataTypes.UUID,
     allowNull: true,
     references: {
-      model: 'users',
+      model: User,
       key: 'id'
     }
   },

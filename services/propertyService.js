@@ -385,6 +385,7 @@ class PropertyService {
             model: User,
             as: 'owner',
             attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl', 'status'],
+            required: false, // Don't fail if owner doesn't exist
             paranoid: false // Include soft-deleted owners to check their status
           },
           {
@@ -408,40 +409,81 @@ class PropertyService {
         throw new Error('Property not found');
       }
 
-      // Check if owner exists but wasn't loaded (might be soft-deleted)
-      if (!property.owner && property.ownerId) {
-        const ownerCheck = await User.findByPk(property.ownerId, {
-          paranoid: false,
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl', 'status', 'deletedAt']
-        });
-        
-        if (ownerCheck) {
-          // If owner exists but is soft-deleted or inactive, still include it but log a warning
-          if (ownerCheck.deletedAt) {
-            console.warn('⚠️ [PROPERTY SERVICE] Property owner is soft-deleted:', {
-              propertyId,
-              ownerId: property.ownerId,
-              deletedAt: ownerCheck.deletedAt
-            });
-          }
-          // Attach owner to property even if soft-deleted (for display purposes)
-          property.owner = ownerCheck;
-        } else {
-          console.error('❌ [PROPERTY SERVICE] Property owner not found in database:', {
-            propertyId,
-            ownerId: property.ownerId
-          });
-        }
-      }
-
       // Increment view count if requested
       if (incrementView) {
         await property.increment('viewCount');
       }
 
+      // Convert Sequelize model to plain object to ensure all associations are properly serialized
+      const propertyData = property.get({ plain: true });
+      
+      // Always try to fetch owner if ownerId exists and owner is not loaded
+      // This ensures owner is always included even if association fails
+      if (!propertyData.owner && propertyData.ownerId) {
+        console.log('⚠️ [PROPERTY SERVICE] Owner not included in association, fetching manually:', {
+          propertyId,
+          ownerId: propertyData.ownerId
+        });
+        
+        try {
+          const ownerCheck = await User.findByPk(propertyData.ownerId, {
+            paranoid: false,
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl', 'status', 'deletedAt']
+          });
+          
+          if (ownerCheck) {
+            // Convert owner to plain object
+            const ownerData = ownerCheck.get({ plain: true });
+            
+            // If owner exists but is soft-deleted or inactive, still include it but log a warning
+            if (ownerData.deletedAt) {
+              console.warn('⚠️ [PROPERTY SERVICE] Property owner is soft-deleted:', {
+                propertyId,
+                ownerId: propertyData.ownerId,
+                deletedAt: ownerData.deletedAt
+              });
+            }
+            
+            // Manually attach owner to propertyData
+            propertyData.owner = ownerData;
+            
+            console.log('✅ [PROPERTY SERVICE] Owner manually attached:', {
+              id: ownerData.id,
+              firstName: ownerData.firstName,
+              lastName: ownerData.lastName,
+              email: ownerData.email,
+            });
+          } else {
+            console.error('❌ [PROPERTY SERVICE] Property owner not found in database:', {
+              propertyId,
+              ownerId: propertyData.ownerId
+            });
+          }
+        } catch (error) {
+          console.error('❌ [PROPERTY SERVICE] Error fetching owner manually:', {
+            propertyId,
+            ownerId: propertyData.ownerId,
+            error: error.message
+          });
+        }
+      }
+      
+      console.log('🔍 [PROPERTY SERVICE] getPropertyById - Final property data:', {
+        id: propertyData.id,
+        title: propertyData.title,
+        ownerId: propertyData.ownerId,
+        hasOwner: !!propertyData.owner,
+        owner: propertyData.owner ? {
+          id: propertyData.owner.id,
+          firstName: propertyData.owner.firstName,
+          lastName: propertyData.owner.lastName,
+          email: propertyData.owner.email,
+        } : null,
+      });
+
       return {
         success: true,
-        data: property
+        data: propertyData
       };
     } catch (error) {
       throw new Error(error.message || 'Failed to fetch property');

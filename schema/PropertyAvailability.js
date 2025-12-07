@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../database/db.js';
+import User from './User.js';
 
 const PropertyAvailability = sequelize.define('PropertyAvailability', {
   id: {
@@ -44,7 +45,7 @@ const PropertyAvailability = sequelize.define('PropertyAvailability', {
     type: DataTypes.UUID,
     allowNull: true,
     references: {
-      model: 'users',
+      model: User,
       key: 'id'
     }
   }

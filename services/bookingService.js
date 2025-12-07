@@ -308,67 +308,32 @@ export const createBooking = async (userId, bookingData) => {
       });
       
       // Double-check user exists in the exact table the foreign key references
-      // The foreign key constraint references 'users' table (lowercase), so verify in both possible table names
+      // The foreign key constraint references 'Users' table (capitalized), verify user exists
       console.log('🔍 [BOOKING SERVICE] Verifying user exists in database table via raw SQL');
       
-      // Try both 'users' and 'Users' table names (case sensitivity issue)
-      let userCheckResult = null;
-      try {
-        [userCheckResult] = await sequelize.query(
-          'SELECT id, email, deletedAt FROM users WHERE id = ? AND deletedAt IS NULL',
+      // Check user existence using raw SQL (use capitalized 'Users' table name - matches User model tableName)
+      const [userCheckResult] = await sequelize.query(
+        'SELECT id, email, deletedAt FROM Users WHERE id = ? AND deletedAt IS NULL',
+        {
+          replacements: [userId],
+          type: sequelize.QueryTypes.SELECT,
+          transaction
+        }
+      );
+      
+      if (!userCheckResult) {
+        console.error('❌ [BOOKING SERVICE] User not found in database table via raw SQL:', userId);
+        await transaction.rollback();
+        
+        // Check if user exists but is soft-deleted
+        const [deletedUserCheck] = await sequelize.query(
+          'SELECT id, email, deletedAt FROM Users WHERE id = ?',
           {
             replacements: [userId],
             type: sequelize.QueryTypes.SELECT,
             transaction
           }
         );
-        console.log('✅ [BOOKING SERVICE] User found in users (lowercase) table');
-      } catch (err) {
-        console.log('⚠️ [BOOKING SERVICE] users (lowercase) table not found, trying Users (uppercase)');
-        try {
-          [userCheckResult] = await sequelize.query(
-            'SELECT id, email, deletedAt FROM Users WHERE id = ? AND deletedAt IS NULL',
-            {
-              replacements: [userId],
-              type: sequelize.QueryTypes.SELECT,
-              transaction
-            }
-          );
-          console.log('✅ [BOOKING SERVICE] User found in Users (uppercase) table');
-        } catch (err2) {
-          console.error('❌ [BOOKING SERVICE] Error checking both table names:', err2);
-        }
-      }
-      
-      if (!userCheckResult) {
-        console.error('❌ [BOOKING SERVICE] User not found in database table via raw SQL:', userId);
-        await transaction.rollback();
-        
-        // Check if user exists but is soft-deleted (try both table names)
-        let deletedUserCheck = null;
-        try {
-          [deletedUserCheck] = await sequelize.query(
-            'SELECT id, email, deletedAt FROM users WHERE id = ?',
-            {
-              replacements: [userId],
-              type: sequelize.QueryTypes.SELECT,
-              transaction
-            }
-          );
-        } catch (err) {
-          try {
-            [deletedUserCheck] = await sequelize.query(
-              'SELECT id, email, deletedAt FROM Users WHERE id = ?',
-              {
-                replacements: [userId],
-                type: sequelize.QueryTypes.SELECT,
-                transaction
-              }
-            );
-          } catch (err2) {
-            // Ignore
-          }
-        }
         
         if (deletedUserCheck && deletedUserCheck.deletedAt) {
           return {

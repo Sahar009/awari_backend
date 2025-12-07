@@ -20,7 +20,7 @@ export const addToFavorites = async (userId, propertyId, notes = null) => {
     
     // First, verify user exists using raw SQL to bypass case sensitivity issues
     const [userCheck] = await sequelize.query(
-      'SELECT id, email, status, deletedAt FROM users WHERE id = ? LIMIT 1',
+      'SELECT id, email, status, deletedAt FROM Users WHERE id = ? LIMIT 1',
       {
         replacements: [userId],
         type: sequelize.QueryTypes.SELECT,
@@ -106,7 +106,7 @@ export const addToFavorites = async (userId, propertyId, notes = null) => {
 
     // Re-verify user within transaction using raw SQL
     const [userInTransactionCheck] = await sequelize.query(
-      'SELECT id FROM users WHERE id = ? AND deletedAt IS NULL LIMIT 1',
+      'SELECT id FROM Users WHERE id = ? AND deletedAt IS NULL LIMIT 1',
       {
         replacements: [userId],
         type: sequelize.QueryTypes.SELECT,
@@ -125,7 +125,7 @@ export const addToFavorites = async (userId, propertyId, notes = null) => {
     }
 
     // Create new favorite within transaction using raw SQL to bypass case sensitivity issue
-    // The database constraint references 'Users' (uppercase) but table is 'users' (lowercase)
+    // The database constraint references 'Users' (capitalized) and table is 'Users' (capitalized)
     // On Linux MySQL, table names are case-sensitive, so we need to work around this
     console.log('✅ [FAVORITE SERVICE] Creating favorite record...');
     
@@ -133,7 +133,7 @@ export const addToFavorites = async (userId, propertyId, notes = null) => {
     const favoriteId = crypto.randomUUID();
     
     // Temporarily disable foreign key checks to work around case sensitivity issue
-    // The constraint was created with 'Users' (uppercase) but table is 'users' (lowercase)
+    // The constraint references 'Users' (capitalized) and table is 'Users' (capitalized)
     await sequelize.query('SET FOREIGN_KEY_CHECKS = 0', { transaction });
     
     try {

@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../database/db.js';
+import User from './User.js';
 
 const SubscriptionPlan = sequelize.define(
   'SubscriptionPlan',
@@ -88,7 +89,7 @@ const SubscriptionPlan = sequelize.define(
       type: DataTypes.UUID,
       allowNull: true,
       references: {
-        model: 'users',
+        model: User,
         key: 'id'
       }
     },
@@ -96,7 +97,7 @@ const SubscriptionPlan = sequelize.define(
       type: DataTypes.UUID,
       allowNull: true,
       references: {
-        model: 'users',
+        model: User,
         key: 'id'
       }
     }
