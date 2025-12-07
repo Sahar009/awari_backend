@@ -202,4 +202,9 @@ export const getTransactions = async (req, res) => {
   return respond(res, result);
 };
 
+export const getLoginSnapshot = async (req, res) => {
+  const result = await adminDashboardService.getLoginSnapshot();
+  return respond(res, result);
+};
+
 

@@ -1,6 +1,6 @@
 import { Op, fn, col, literal } from 'sequelize';
 import crypto from 'crypto';
-import { User, Property, Booking, Payment, Subscription, Review, KycDocument, SubscriptionPlan } from '../schema/index.js';
+import { User, Property, Booking, Payment, Subscription, Review, KycDocument, SubscriptionPlan, Notification } from '../schema/index.js';
 import { sendEmail } from '../modules/notifications/email.js';
 import propertyService from './propertyService.js';
 import subscriptionService from './subscriptionService.js';
@@ -2333,6 +2333,66 @@ export const getReportsMetrics = async (options = {}) => {
     return {
       success: false,
       message: 'Failed to retrieve reports metrics',
+      error: error.message,
+      statusCode: 500
+    };
+  }
+};
+
+/**
+ * Get login snapshot data for admin login page
+ * Returns quick stats: pending listings, active hosts, urgent notifications
+ */
+export const getLoginSnapshot = async () => {
+  try {
+    // Calculate 24 hours ago for active hosts
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+
+    const [
+      pendingListings,
+      activeHosts,
+      urgentNotifications
+    ] = await Promise.all([
+      // New listings pending review
+      Property.count({ 
+        where: { status: 'pending' } 
+      }),
+      
+      // Active hosts online (landlords/agents who logged in within last 24 hours)
+      User.count({
+        where: {
+          role: { [Op.in]: ['landlord', 'agent', 'hotel_provider'] },
+          status: 'active',
+          lastLogin: { [Op.gte]: twentyFourHoursAgo }
+        }
+      }),
+      
+      // Urgent support tickets/notifications
+      Notification.count({
+        where: {
+          priority: { [Op.in]: ['urgent', 'high'] },
+          status: 'unread',
+          isRead: false
+        }
+      })
+    ]);
+
+    return {
+      success: true,
+      message: 'Login snapshot retrieved successfully',
+      data: {
+        pendingListings,
+        activeHosts,
+        urgentNotifications
+      },
+      statusCode: 200
+    };
+  } catch (error) {
+    console.error('Admin login snapshot error:', error);
+    return {
+      success: false,
+      message: 'Failed to retrieve login snapshot',
       error: error.message,
       statusCode: 500
     };

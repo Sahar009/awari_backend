@@ -32,7 +32,8 @@ import {
   updateSubscription,
   cancelSubscription,
   renewSubscription,
-  getReportsMetrics
+  getReportsMetrics,
+  getLoginSnapshot
 } from '../controllers/adminDashboardController.js';
 import {
   overviewValidation,
@@ -83,6 +84,10 @@ const handleValidationErrors = (req, res, next) => {
   return next();
 };
 
+// Public snapshot endpoint (no auth required for login page)
+router.get('/snapshot', getLoginSnapshot);
+
+// All other routes require admin authentication
 router.use(authenticateToken, requireRole('admin'));
 
 router.get('/overview', overviewValidation, handleValidationErrors, getOverviewStats);
