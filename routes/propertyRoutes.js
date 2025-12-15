@@ -19,7 +19,8 @@ import {
   processPropertyUploadedFiles,
   handlePropertyUploadError,
   validatePropertyFileUpload,
-  validatePropertyFileCount
+  validatePropertyFileCount,
+  parseFormDataArrays
 } from '../middlewares/propertyUploadMiddleware.js';
 
 const router = express.Router();
@@ -830,6 +831,7 @@ router.post('/upload',
   uploadPropertyMedia, 
   handlePropertyUploadError,
   processPropertyUploadedFiles,
+  parseFormDataArrays,
   validatePropertyFileCount(8, 2, 3),
   createPropertyValidation, 
   propertyController.createProperty

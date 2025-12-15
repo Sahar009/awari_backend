@@ -50,6 +50,124 @@ export const uploadPropertyMedia = upload.fields([
 export const uploadSinglePropertyMedia = upload.single('media');
 
 /**
+ * Parse FormData array fields (handles both JSON strings and indexed fields)
+ * This middleware should run after multer processes the files
+ */
+export const parseFormDataArrays = (req, res, next) => {
+  try {
+    console.log('\n🔄 [PARSE MIDDLEWARE] ========== PARSING FORMDATA ARRAYS ==========');
+    console.log('🔄 [PARSE MIDDLEWARE] Request body keys:', Object.keys(req.body || {}));
+    
+    // Array fields that might come as JSON strings or indexed fields
+    const arrayFields = ['features', 'amenities', 'roomTypes', 'hotelAmenities', 'tags', 'seoKeywords'];
+    
+    arrayFields.forEach(fieldName => {
+      // First, check if it's already a JSON string (from frontend/mobile)
+      if (req.body[fieldName] !== undefined && req.body[fieldName] !== null) {
+        console.log(`🔍 [PARSE MIDDLEWARE] Checking ${fieldName}:`, {
+          type: typeof req.body[fieldName],
+          value: typeof req.body[fieldName] === 'string' 
+            ? req.body[fieldName].substring(0, 100) 
+            : req.body[fieldName],
+          isString: typeof req.body[fieldName] === 'string',
+          isArray: Array.isArray(req.body[fieldName])
+        });
+        
+        if (typeof req.body[fieldName] === 'string') {
+          // Try to parse as JSON
+          try {
+            const parsed = JSON.parse(req.body[fieldName]);
+            if (Array.isArray(parsed)) {
+              req.body[fieldName] = parsed;
+              console.log(`✅ [PARSE MIDDLEWARE] Parsed ${fieldName} from JSON string:`, parsed);
+              return; // Skip indexed field check if JSON parsing succeeded
+            } else {
+              console.log(`⚠️ [PARSE MIDDLEWARE] ${fieldName} parsed but not an array:`, parsed);
+            }
+          } catch (e) {
+            console.log(`⚠️ [PARSE MIDDLEWARE] ${fieldName} is not valid JSON, trying indexed fields:`, e.message);
+            // Not valid JSON, continue to check for indexed fields
+          }
+        } else if (Array.isArray(req.body[fieldName])) {
+          console.log(`✅ [PARSE MIDDLEWARE] ${fieldName} is already an array:`, req.body[fieldName]);
+          return; // Already an array, no need to parse
+        }
+      }
+      
+      // Check if we have indexed fields like features[0], features[1] (from mobile)
+      const indexedFields = Object.keys(req.body || {}).filter(key => 
+        key.startsWith(`${fieldName}[`) && key.endsWith(']')
+      );
+      
+      if (indexedFields.length > 0) {
+        console.log(`🔄 [PARSE MIDDLEWARE] Found indexed ${fieldName} fields:`, indexedFields);
+        
+        // Extract values and sort by index
+        const values = indexedFields
+          .map(key => {
+            const match = key.match(/\[(\d+)\]/);
+            return match ? { index: parseInt(match[1]), value: req.body[key] } : null;
+          })
+          .filter(Boolean)
+          .sort((a, b) => a.index - b.index)
+          .map(item => item.value);
+        
+        // Set as array in req.body
+        req.body[fieldName] = values;
+        console.log(`✅ [PARSE MIDDLEWARE] Parsed ${fieldName} as array from indexed fields:`, values);
+        
+        // Remove indexed fields from req.body
+        indexedFields.forEach(key => delete req.body[key]);
+      }
+    });
+    
+    // Parse boolean fields
+    const booleanFields = ['negotiable', 'furnished', 'petFriendly', 'smokingAllowed', 'instantBooking', 'featured'];
+    booleanFields.forEach(fieldName => {
+      if (req.body[fieldName] !== undefined) {
+        if (typeof req.body[fieldName] === 'string') {
+          req.body[fieldName] = req.body[fieldName].toLowerCase() === 'true';
+          console.log(`✅ [PARSE MIDDLEWARE] Parsed ${fieldName} as boolean:`, req.body[fieldName]);
+        }
+      }
+    });
+    
+    // Parse numeric fields
+    const numericFields = ['price', 'originalPrice', 'bedrooms', 'bathrooms', 'toilets', 'parkingSpaces', 
+                          'floorArea', 'landArea', 'floorNumber', 'totalFloors', 'yearBuilt', 
+                          'numberOfRooms', 'maxGuestsPerRoom', 'starRating', 'minLeasePeriod', 
+                          'maxLeasePeriod', 'minStayNights', 'maxStayNights'];
+    numericFields.forEach(fieldName => {
+      if (req.body[fieldName] !== undefined && req.body[fieldName] !== null && req.body[fieldName] !== '') {
+        const numValue = parseFloat(req.body[fieldName]);
+        if (!isNaN(numValue)) {
+          // Check if it should be an integer
+          if (['bedrooms', 'bathrooms', 'toilets', 'parkingSpaces', 'floorNumber', 'totalFloors', 
+               'yearBuilt', 'numberOfRooms', 'maxGuestsPerRoom', 'starRating', 
+               'minLeasePeriod', 'maxLeasePeriod', 'minStayNights', 'maxStayNights'].includes(fieldName)) {
+            req.body[fieldName] = parseInt(req.body[fieldName], 10);
+          } else {
+            req.body[fieldName] = numValue;
+          }
+          console.log(`✅ [PARSE MIDDLEWARE] Parsed ${fieldName} as number:`, req.body[fieldName]);
+        }
+      } else if (req.body[fieldName] === '') {
+        // Empty string should be undefined
+        delete req.body[fieldName];
+      }
+    });
+    
+    console.log('✅ [PARSE MIDDLEWARE] ========== PARSING COMPLETE ==========');
+    console.log('✅ [PARSE MIDDLEWARE] Final body keys:', Object.keys(req.body || {}));
+    
+    next();
+  } catch (error) {
+    console.error('❌ [PARSE MIDDLEWARE] Error parsing FormData arrays:', error);
+    next(error);
+  }
+};
+
+/**
  * Process uploaded files and upload to Cloudinary
  */
 export const processPropertyUploadedFiles = async (req, res, next) => {
