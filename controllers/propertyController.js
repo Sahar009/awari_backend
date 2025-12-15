@@ -171,7 +171,9 @@ class PropertyController {
         featured: req.query.featured,
         sortBy: req.query.sortBy,
         sortOrder: req.query.sortOrder,
-        search: req.query.search
+        search: req.query.search,
+        checkInDate: req.query.checkInDate,
+        checkOutDate: req.query.checkOutDate
       };
 
       const result = await propertyService.getAllProperties(options);

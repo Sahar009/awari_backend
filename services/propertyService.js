@@ -218,7 +218,9 @@ class PropertyService {
         featured,
         sortBy = 'createdAt',
         sortOrder = 'DESC',
-        search
+        search,
+        checkInDate,
+        checkOutDate
       } = options;
 
       const offset = (page - 1) * limit;
@@ -291,15 +293,35 @@ class PropertyService {
         offset: parseInt(offset)
       });
 
+      // Filter by availability if checkInDate and checkOutDate are provided
+      let filteredProperties = rows;
+      if (checkInDate && checkOutDate && (listingType === 'shortlet' || listingType === 'rent' || listingType === 'hotel' || listingType?.includes('shortlet') || listingType?.includes('hotel'))) {
+        const { checkDateRangeAvailability } = await import('./availabilityService.js');
+        const availabilityChecks = await Promise.all(
+          rows.map(async (property) => {
+            try {
+              const availability = await checkDateRangeAvailability(property.id, checkInDate, checkOutDate);
+              return { property, available: availability.available };
+            } catch (error) {
+              console.error(`Error checking availability for property ${property.id}:`, error);
+              return { property, available: false };
+            }
+          })
+        );
+        filteredProperties = availabilityChecks
+          .filter(check => check.available)
+          .map(check => check.property);
+      }
+
       return {
         success: true,
         data: {
-          properties: rows,
+          properties: filteredProperties,
           pagination: {
-            total: count,
+            total: checkInDate && checkOutDate ? filteredProperties.length : count,
             page: parseInt(page),
             limit: parseInt(limit),
-            pages: Math.ceil(count / limit)
+            pages: Math.ceil((checkInDate && checkOutDate ? filteredProperties.length : count) / limit)
           }
         }
       };

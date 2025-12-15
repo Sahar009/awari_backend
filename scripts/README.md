@@ -68,3 +68,4 @@ npm run create-tables
 - Scripts automatically close database connections when finished
 - Scripts handle errors gracefully and provide clear error messages
 
+

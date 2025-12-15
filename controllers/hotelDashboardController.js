@@ -72,3 +72,4 @@ export const getHotelAnalytics = async (req, res) => {
 
 
 
+
