@@ -262,6 +262,51 @@ export const changePasswordValidation = [
 ];
 
 /**
+ * Validation rules for preferences update
+ */
+export const updatePreferencesValidation = [
+  body('notifications')
+    .optional()
+    .isObject()
+    .withMessage('Notifications must be an object'),
+  
+  body('notifications.email')
+    .optional()
+    .isBoolean()
+    .withMessage('Email notification preference must be a boolean'),
+  
+  body('notifications.push')
+    .optional()
+    .isBoolean()
+    .withMessage('Push notification preference must be a boolean'),
+  
+  body('notifications.sms')
+    .optional()
+    .isBoolean()
+    .withMessage('SMS notification preference must be a boolean'),
+  
+  body('privacy')
+    .optional()
+    .isObject()
+    .withMessage('Privacy must be an object'),
+  
+  body('privacy.profileVisible')
+    .optional()
+    .isBoolean()
+    .withMessage('Profile visibility preference must be a boolean'),
+  
+  body('privacy.showEmail')
+    .optional()
+    .isBoolean()
+    .withMessage('Show email preference must be a boolean'),
+  
+  body('privacy.showPhone')
+    .optional()
+    .isBoolean()
+    .withMessage('Show phone preference must be a boolean'),
+];
+
+/**
  * Validation rules for user ID parameter
  */
 export const userIdValidation = [

@@ -687,6 +687,83 @@ class AuthController {
   }
 
   /**
+   * Get user preferences
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async getPreferences(req, res) {
+    try {
+      const userId = req.user.id;
+      const preferences = await authService.getPreferences(userId);
+
+      res.status(200).json({
+        success: true,
+        data: preferences,
+      });
+    } catch (error) {
+      console.error('Get preferences error:', error);
+      
+      if (error.message === 'User not found') {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      });
+    }
+  }
+
+  /**
+   * Update user preferences
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async updatePreferences(req, res) {
+    try {
+      // Check for validation errors
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: errors.array(),
+        });
+      }
+
+      const userId = req.user.id;
+      const preferencesData = req.body;
+
+      const updatedPreferences = await authService.updatePreferences(userId, preferencesData);
+
+      res.status(200).json({
+        success: true,
+        message: 'Preferences updated successfully',
+        data: updatedPreferences,
+      });
+    } catch (error) {
+      console.error('Update preferences error:', error);
+      
+      if (error.message === 'User not found') {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      });
+    }
+  }
+
+  /**
    * Change user password
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object

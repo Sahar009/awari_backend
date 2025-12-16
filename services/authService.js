@@ -61,6 +61,7 @@ class AuthService {
         const userJson = user.toJSON();
         const { passwordHash: _, emailVerificationCode: __, ...rest } = userJson;
         userWithoutPassword = rest;
+        userWithoutPassword.hasPassword = !!hashedPassword; // User just registered, so they have a password
       } catch (jsonError) {
         await transaction.rollback();
         console.error('User data serialization error:', jsonError);
@@ -160,6 +161,7 @@ class AuthService {
       const token = this.generateToken(user);
 
       const { passwordHash, emailVerificationCode, ...userWithoutPassword } = user.toJSON();
+      userWithoutPassword.hasPassword = !!passwordHash;
 
       return {
         user: userWithoutPassword,
@@ -217,6 +219,7 @@ class AuthService {
       const token = this.generateToken(user);
 
       const { passwordHash, emailVerificationCode, ...userWithoutPassword } = user.toJSON();
+      userWithoutPassword.hasPassword = !!passwordHash;
 
       return {
         user: userWithoutPassword,
@@ -745,7 +748,15 @@ class AuthService {
         throw new Error('User not found');
       }
 
-      return user;
+      // Convert to JSON and add hasPassword field (without exposing passwordHash)
+      const userJson = user.toJSON();
+      // Check if user has password by querying the actual passwordHash field
+      const userWithPassword = await User.findByPk(userId, {
+        attributes: ['id', 'passwordHash']
+      });
+      userJson.hasPassword = !!userWithPassword?.passwordHash;
+
+      return userJson;
     } catch (error) {
       throw error;
     }
@@ -790,6 +801,11 @@ class AuthService {
       
       // Reload user to get updated data
       await user.reload();
+      
+      // Get passwordHash to check if user has password
+      const userWithPassword = await User.findByPk(userId, {
+        attributes: ['id', 'passwordHash']
+      });
 
       const { 
         passwordHash: _, 
@@ -798,6 +814,9 @@ class AuthService {
         accountDeletionToken: ____, 
         ...userWithoutPassword 
       } = user.toJSON();
+      
+      // Add hasPassword field
+      userWithoutPassword.hasPassword = !!userWithPassword?.passwordHash;
 
       console.log('✅ [AUTH SERVICE] Profile updated successfully');
       return userWithoutPassword;
@@ -828,6 +847,109 @@ class AuthService {
       }
 
       return this.generateToken(user);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get user preferences (notifications and privacy settings)
+   * @param {string} userId - User ID
+   * @returns {Object} User preferences
+   */
+  async getPreferences(userId) {
+    try {
+      const user = await User.findByPk(userId, {
+        attributes: ['id', 'preferences']
+      });
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Default preferences structure
+      const defaultPreferences = {
+        notifications: {
+          email: true,
+          push: true,
+          sms: false,
+        },
+        privacy: {
+          profileVisible: true,
+          showEmail: false,
+          showPhone: false,
+        },
+      };
+
+      // Merge with existing preferences if any
+      const preferences = user.preferences || {};
+      return {
+        notifications: {
+          ...defaultPreferences.notifications,
+          ...(preferences.notifications || {}),
+        },
+        privacy: {
+          ...defaultPreferences.privacy,
+          ...(preferences.privacy || {}),
+        },
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Update user preferences (notifications and privacy settings)
+   * @param {string} userId - User ID
+   * @param {Object} preferencesData - Preferences data to update
+   * @returns {Object} Updated preferences
+   */
+  async updatePreferences(userId, preferencesData) {
+    try {
+      const user = await User.findByPk(userId);
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Get existing preferences or initialize empty object
+      const existingPreferences = user.preferences || {};
+
+      // Merge new preferences with existing ones
+      const updatedPreferences = {
+        ...existingPreferences,
+        ...(preferencesData.notifications && {
+          notifications: {
+            ...(existingPreferences.notifications || {}),
+            ...preferencesData.notifications,
+          },
+        }),
+        ...(preferencesData.privacy && {
+          privacy: {
+            ...(existingPreferences.privacy || {}),
+            ...preferencesData.privacy,
+          },
+        }),
+      };
+
+      // Update user preferences
+      await user.update({ preferences: updatedPreferences });
+
+      // Return the updated preferences
+      return {
+        notifications: {
+          email: true,
+          push: true,
+          sms: false,
+          ...updatedPreferences.notifications,
+        },
+        privacy: {
+          profileVisible: true,
+          showEmail: false,
+          showPhone: false,
+          ...updatedPreferences.privacy,
+        },
+      };
     } catch (error) {
       throw error;
     }

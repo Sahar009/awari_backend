@@ -6,7 +6,8 @@ import {
   loginValidation,
   updateProfileValidation,
   changePasswordValidation,
-  registerDeviceTokenValidation
+  registerDeviceTokenValidation,
+  updatePreferencesValidation
 } from '../validations/authValidation.js';
 import multer from 'multer';
 import { uploadToCloudinary } from '../config/cloudinary.js';
@@ -923,5 +924,105 @@ router.post('/logout', authenticateToken, authController.logout);
  *         description: Internal server error
  * */
 router.post('/register-device-token', authenticateToken, registerDeviceTokenValidation, authController.registerDeviceToken);
+
+/**
+ * @swagger
+ * /api/auth/settings/preferences:
+ *   get:
+ *     summary: Get user preferences (notifications and privacy)
+ *     tags: [Authentication]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Preferences retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     notifications:
+ *                       type: object
+ *                       properties:
+ *                         email:
+ *                           type: boolean
+ *                         push:
+ *                           type: boolean
+ *                         sms:
+ *                           type: boolean
+ *                     privacy:
+ *                       type: object
+ *                       properties:
+ *                         profileVisible:
+ *                           type: boolean
+ *                         showEmail:
+ *                           type: boolean
+ *                         showPhone:
+ *                           type: boolean
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ * */
+router.get('/settings/preferences', authenticateToken, authController.getPreferences);
+
+/**
+ * @swagger
+ * /api/auth/settings/preferences:
+ *   put:
+ *     summary: Update user preferences (notifications and privacy)
+ *     tags: [Authentication]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               notifications:
+ *                 type: object
+ *                 properties:
+ *                   email:
+ *                     type: boolean
+ *                   push:
+ *                     type: boolean
+ *                   sms:
+ *                     type: boolean
+ *               privacy:
+ *                 type: object
+ *                 properties:
+ *                   profileVisible:
+ *                     type: boolean
+ *                   showEmail:
+ *                     type: boolean
+ *                   showPhone:
+ *                     type: boolean
+ *           example:
+ *             notifications:
+ *               email: true
+ *               push: true
+ *               sms: false
+ *             privacy:
+ *               profileVisible: true
+ *               showEmail: false
+ *               showPhone: false
+ *     responses:
+ *       200:
+ *         description: Preferences updated successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ * */
+router.put('/settings/preferences', authenticateToken, updatePreferencesValidation, authController.updatePreferences);
 
 export default router;
