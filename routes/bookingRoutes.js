@@ -843,4 +843,44 @@ router.get('/properties/:propertyId/bookings',
   bookingController.getPropertyBookings
 );
 
+/**
+ * @swagger
+ * /api/bookings/{id}/download-receipt:
+ *   get:
+ *     summary: Download booking receipt as PDF
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Booking ID
+ *     responses:
+ *       200:
+ *         description: PDF receipt downloaded successfully
+ *         content:
+ *           application/pdf:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Not authorized to access this booking
+ *       404:
+ *         description: Booking not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/:id/download-receipt', 
+  authenticateToken,
+  param('id').isUUID().withMessage('Invalid booking ID'),
+  handleValidationErrors,
+  bookingController.downloadBookingReceipt
+);
+
 export default router;

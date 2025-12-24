@@ -52,11 +52,11 @@ const Booking = sequelize.define('Booking', {
     allowNull: true
   },
   inspectionDate: {
-    type: DataTypes.DATE,
+    type: DataTypes.DATEONLY,
     allowNull: true
   },
   inspectionTime: {
-    type: DataTypes.TIME,
+    type: DataTypes.STRING(5), // Store as HH:MM string format
     allowNull: true
   },
   

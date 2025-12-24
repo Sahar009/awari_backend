@@ -54,6 +54,40 @@ export const connectToDB = async () => {
       }
     }
     
+    // Manually create Bookings table if it doesn't exist
+    try {
+      const [results] = await sequelize.query(
+        "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'Bookings' AND TABLE_SCHEMA = DATABASE()"
+      );
+      
+      if (results.length === 0) {
+        console.log("📋 Bookings table doesn't exist, creating it...");
+        // Import Booking model to trigger table creation
+        const { default: Booking } = await import('../schema/Booking.js');
+        await Booking.sync({ force: false });
+        console.log("✅ Bookings table created successfully");
+      } else {
+        // Table exists, check if we need to update inspectionDate and inspectionTime columns
+        const [columns] = await sequelize.query("DESCRIBE Bookings");
+        const inspectionDateCol = columns.find(col => col.Field === 'inspectionDate');
+        const inspectionTimeCol = columns.find(col => col.Field === 'inspectionTime');
+        
+        if (inspectionDateCol && inspectionDateCol.Type !== 'date') {
+          console.log("🔧 Updating inspectionDate column type...");
+          await sequelize.query("ALTER TABLE Bookings MODIFY COLUMN inspectionDate DATE NULL");
+          console.log("✅ inspectionDate column updated");
+        }
+        
+        if (inspectionTimeCol && !inspectionTimeCol.Type.includes('varchar')) {
+          console.log("🔧 Updating inspectionTime column type...");
+          await sequelize.query("ALTER TABLE Bookings MODIFY COLUMN inspectionTime VARCHAR(5) NULL");
+          console.log("✅ inspectionTime column updated");
+        }
+      }
+    } catch (bookingTableError) {
+      console.warn("⚠️ Bookings table check/creation warning:", bookingTableError.message);
+    }
+    
   } catch (error) {
     console.error("❌ Unable to connect to the database:", error.message)
     console.log("\n🔧 Cloud SQL Troubleshooting:")

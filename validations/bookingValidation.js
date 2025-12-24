@@ -49,10 +49,33 @@ export const createBookingValidation = [
     .optional()
     .isISO8601()
     .withMessage('Inspection date must be a valid date')
-    .custom((value) => {
-      if (value && new Date(value) < new Date()) {
+    .custom((value, { req }) => {
+      if (!value) return true;
+      
+      const inspectionDate = new Date(value);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      inspectionDate.setHours(0, 0, 0, 0);
+      
+      // If inspection date is before today, reject
+      if (inspectionDate < today) {
         throw new Error('Inspection date cannot be in the past');
       }
+      
+      // If inspection date is today, check if the time has passed
+      if (inspectionDate.getTime() === today.getTime() && req.body.inspectionTime) {
+        const [hours, minutes] = req.body.inspectionTime.split(':').map(Number);
+        const now = new Date();
+        const inspectionDateTime = new Date();
+        inspectionDateTime.setHours(hours, minutes, 0, 0);
+        
+        // Allow booking if inspection time is at least 1 hour from now
+        const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+        if (inspectionDateTime < oneHourFromNow) {
+          throw new Error('Inspection time must be at least 1 hour from now for same-day bookings');
+        }
+      }
+      
       return true;
     }),
   

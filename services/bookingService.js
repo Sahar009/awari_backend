@@ -11,6 +11,7 @@ import { sendTemplateNotification } from './notificationService.js';
 import { sendEmail } from '../modules/notifications/email.js';
 import Payment from '../schema/Payment.js';
 import sequelize from '../database/db.js';
+import { generateBookingReceiptPDF } from './pdfService.js';
 
 /**
  * Create a new booking
@@ -1481,5 +1482,51 @@ export const sendBookingReceipt = async (booking, user, payment = null) => {
   } catch (error) {
     console.error('Error sending booking receipt:', error);
     return false;
+  }
+};
+
+/**
+ * Download booking receipt as PDF
+ * @param {string} bookingId - Booking ID
+ * @param {string} userId - User ID requesting the receipt
+ * @returns {Object} Result object with PDF buffer
+ */
+export const downloadBookingReceipt = async (bookingId, userId) => {
+  try {
+    console.log(`📄 Generating PDF receipt for booking ${bookingId}`);
+
+    // Generate PDF
+    const pdfBuffer = await generateBookingReceiptPDF(bookingId, userId);
+
+    return {
+      success: true,
+      message: 'Receipt generated successfully',
+      data: pdfBuffer,
+      statusCode: 200
+    };
+  } catch (error) {
+    console.error('Error downloading booking receipt:', error);
+    
+    if (error.message === 'Booking not found') {
+      return {
+        success: false,
+        message: 'Booking not found',
+        statusCode: 404
+      };
+    }
+    
+    if (error.message === 'Unauthorized access to booking') {
+      return {
+        success: false,
+        message: 'You do not have permission to access this booking',
+        statusCode: 403
+      };
+    }
+
+    return {
+      success: false,
+      message: 'Failed to generate receipt',
+      statusCode: 500
+    };
   }
 };

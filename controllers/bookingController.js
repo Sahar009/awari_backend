@@ -316,3 +316,48 @@ export const getBookingStatistics = async (req, res) => {
     });
   }
 };
+
+/**
+ * Download booking receipt as PDF
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const downloadBookingReceipt = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    const userId = req.user.id;
+    const { id: bookingId } = req.params;
+
+    console.log(`📄 [BOOKING CONTROLLER] Downloading receipt for booking ${bookingId}`);
+
+    const result = await bookingService.downloadBookingReceipt(bookingId, userId);
+
+    if (!result.success) {
+      return res.status(result.statusCode).json({
+        success: result.success,
+        message: result.message
+      });
+    }
+
+    // Set headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=booking-receipt-${bookingId}.pdf`);
+    res.setHeader('Content-Length', result.data.length);
+
+    // Send PDF buffer
+    return res.send(result.data);
+  } catch (error) {
+    console.error('❌ [BOOKING CONTROLLER] Download receipt error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to download receipt',
+      error: error.message
+    });
+  }
+};
