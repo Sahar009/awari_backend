@@ -12,6 +12,8 @@ import Subscription from './Subscription.js';
 import SubscriptionPlan from './SubscriptionPlan.js';
 import NewsletterSubscription from './NewsletterSubscription.js';
 import Favorite from './Favorite.js';
+import Wallet from './Wallet.js';
+import WalletTransaction from './WalletTransaction.js';
 
 // Define associations
 const defineAssociations = () => {
@@ -31,6 +33,8 @@ const defineAssociations = () => {
   User.hasMany(Notification, { as: 'notifications', foreignKey: 'userId' });
   User.hasMany(Subscription, { as: 'subscriptions', foreignKey: 'userId' });
   User.hasMany(Favorite, { as: 'favorites', foreignKey: 'userId' });
+  User.hasOne(Wallet, { as: 'wallet', foreignKey: 'userId' });
+  User.hasMany(WalletTransaction, { as: 'walletTransactions', foreignKey: 'userId' });
 
   // KYC Document associations
   KycDocument.belongsTo(User, { as: 'user', foreignKey: 'userId' });
@@ -102,6 +106,14 @@ const defineAssociations = () => {
   // Favorite associations
   Favorite.belongsTo(User, { as: 'user', foreignKey: 'userId' });
   Favorite.belongsTo(Property, { as: 'property', foreignKey: 'propertyId' });
+
+  // Wallet associations
+  Wallet.belongsTo(User, { as: 'user', foreignKey: 'userId' });
+  Wallet.hasMany(WalletTransaction, { as: 'transactions', foreignKey: 'walletId' });
+
+  // WalletTransaction associations
+  WalletTransaction.belongsTo(User, { as: 'user', foreignKey: 'userId' });
+  WalletTransaction.belongsTo(Wallet, { as: 'wallet', foreignKey: 'walletId' });
 };
 
 // Initialize associations
@@ -121,7 +133,9 @@ export {
   Subscription,
   SubscriptionPlan,
   NewsletterSubscription,
-  Favorite
+  Favorite,
+  Wallet,
+  WalletTransaction
 };
 
 export default {
@@ -138,5 +152,7 @@ export default {
   Subscription,
   SubscriptionPlan,
   NewsletterSubscription,
-  Favorite
+  Favorite,
+  Wallet,
+  WalletTransaction
 };

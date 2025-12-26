@@ -9,6 +9,7 @@ import {
 } from '../utils/index.js';
 import { sendEmail } from '../modules/notifications/email.js';
 import { sendTemplateNotification } from './notificationService.js';
+import walletService from './walletService.js';
 
 class AuthService {
   /**
@@ -82,13 +83,6 @@ class AuthService {
         throw new Error('Failed to save user. Please try again.');
       }
 
-      // Prepare response data - return immediately after commit
-      const responseData = {
-        user: userWithoutPassword,
-        token,
-        message: 'Registration successful. Please check your email for verification code.'
-      };
-
       // Send email verification asynchronously (non-blocking - don't fail registration if email fails)
       // Don't await - let it run in background
       this.sendVerificationEmail(user.email, verificationCode, user.firstName).catch((emailError) => {
@@ -100,7 +94,34 @@ class AuthService {
         console.warn('⚠️ Welcome notification failed, but user was created:', notificationError.message);
       });
 
-      // Return immediately - don't wait for email/notification
+      // Create Paystack wallet and wait for it
+      let wallet = null;
+      try {
+        wallet = await walletService.createWallet(user.id);
+        console.log('✅ Wallet created successfully for new user');
+      } catch (walletError) {
+        console.warn('⚠️ Wallet creation failed, but user was created:', walletError.message);
+      }
+
+      // Prepare response data with wallet
+      const responseData = {
+        user: userWithoutPassword,
+        wallet: wallet ? {
+          id: wallet.id,
+          walletAddress: wallet.walletAddress,
+          accountNumber: wallet.accountNumber,
+          accountName: wallet.accountName,
+          bankName: wallet.bankName,
+          bankCode: wallet.bankCode,
+          balance: wallet.balance,
+          currency: wallet.currency,
+          status: wallet.status,
+          paystackCustomerCode: wallet.paystackCustomerCode
+        } : null,
+        token,
+        message: 'Registration successful. Please check your email for verification code.'
+      };
+
       return responseData;
     } catch (error) {
       // Rollback transaction if it hasn't been committed
@@ -158,13 +179,52 @@ class AuthService {
         loginCount: user.loginCount + 1
       });
 
+      console.log('🔍 [AUTH SERVICE - LOGIN] Starting wallet retrieval for userId:', user.id);
+      
+      // Check and create wallet if it doesn't exist
+      let wallet = null;
+      try {
+        console.log('🔍 [AUTH SERVICE - LOGIN] Calling walletService.getOrCreateWallet...');
+        wallet = await walletService.getOrCreateWallet(user.id);
+        
+        if (wallet) {
+          console.log('✅ [AUTH SERVICE - LOGIN] Wallet retrieved/created successfully:', {
+            walletId: wallet.id,
+            userId: wallet.userId,
+            balance: wallet.balance,
+            status: wallet.status
+          });
+        } else {
+          console.error('❌ [AUTH SERVICE - LOGIN] Wallet is null after getOrCreateWallet');
+        }
+      } catch (walletError) {
+        console.error('❌ [AUTH SERVICE - LOGIN] Wallet check/creation failed:', walletError.message);
+        console.error('❌ [AUTH SERVICE - LOGIN] Wallet error stack:', walletError.stack);
+      }
+
       const token = this.generateToken(user);
 
       const { passwordHash, emailVerificationCode, ...userWithoutPassword } = user.toJSON();
       userWithoutPassword.hasPassword = !!passwordHash;
 
+      const walletData = wallet ? {
+        id: wallet.id,
+        walletAddress: wallet.walletAddress,
+        balance: wallet.balance,
+        currency: wallet.currency,
+        status: wallet.status,
+        paystackCustomerCode: wallet.paystackCustomerCode
+      } : null;
+
+      console.log('🔍 [AUTH SERVICE - LOGIN] Preparing response:', {
+        userId: user.id,
+        hasWallet: !!wallet,
+        walletData: walletData
+      });
+
       return {
         user: userWithoutPassword,
+        wallet: walletData,
         token
       };
     } catch (error) {
@@ -189,6 +249,8 @@ class AuthService {
         where: { email: firebaseUser.email }
       });
 
+      let wallet = null;
+      
       if (user) {
         await user.update({
           lastLogin: new Date(),
@@ -200,6 +262,14 @@ class AuthService {
 
         if (user.status !== 'active') {
           throw new Error('Account is not active. Please contact support.');
+        }
+
+        // Check and create wallet if it doesn't exist
+        try {
+          wallet = await walletService.getOrCreateWallet(user.id);
+          console.log('✅ Wallet retrieved/created for Google sign-in');
+        } catch (walletError) {
+          console.warn('⚠️ Wallet check/creation failed during Google sign-in:', walletError.message);
         }
       } else {
         user = await User.create({
@@ -214,6 +284,14 @@ class AuthService {
           role: 'renter', 
           profileCompleted: false
         });
+
+        // Create wallet for new Google user
+        try {
+          wallet = await walletService.createWallet(user.id);
+          console.log('✅ Wallet created for new Google user');
+        } catch (walletError) {
+          console.warn('⚠️ Wallet creation failed for new Google user:', walletError.message);
+        }
       }
 
       const token = this.generateToken(user);
@@ -223,6 +301,18 @@ class AuthService {
 
       return {
         user: userWithoutPassword,
+        wallet: wallet ? {
+          id: wallet.id,
+          walletAddress: wallet.walletAddress,
+          accountNumber: wallet.accountNumber,
+          accountName: wallet.accountName,
+          bankName: wallet.bankName,
+          bankCode: wallet.bankCode,
+          balance: wallet.balance,
+          currency: wallet.currency,
+          status: wallet.status,
+          paystackCustomerCode: wallet.paystackCustomerCode
+        } : null,
         token,
         message: user.passwordHash ? 'Login successful' : 'Account created successfully with Google'
       };
@@ -756,7 +846,25 @@ class AuthService {
       });
       userJson.hasPassword = !!userWithPassword?.passwordHash;
 
-      return userJson;
+      // Get wallet data
+      let wallet = null;
+      try {
+        wallet = await walletService.getWalletByUserId(userId);
+      } catch (walletError) {
+        console.warn('⚠️ Failed to fetch wallet for profile:', walletError.message);
+      }
+
+      return {
+        ...userJson,
+        wallet: wallet ? {
+          id: wallet.id,
+          walletAddress: wallet.walletAddress,
+          balance: wallet.balance,
+          currency: wallet.currency,
+          status: wallet.status,
+          paystackCustomerCode: wallet.paystackCustomerCode
+        } : null
+      };
     } catch (error) {
       throw error;
     }

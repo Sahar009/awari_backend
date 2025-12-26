@@ -15,6 +15,9 @@ import userDashboardRoutes from './userDashboardRoutes.js';
 import landlordDashboardRoutes from './landlordDashboardRoutes.js';
 import hotelDashboardRoutes from './hotelDashboardRoutes.js';
 import adminDashboardRoutes from './adminDashboardRoutes.js';
+import walletRoutes from './walletRoutes.js';
+import paystackWebhookRoutes from './paystackWebhookRoutes.js';
+import adminWithdrawalRoutes from './adminWithdrawalRoutes.js';
 import { sendEmail } from '../modules/notifications/email.js';
 
 const router = (app) => {
@@ -31,6 +34,9 @@ const router = (app) => {
   app.use('/api/payments', paymentRoutes);
   app.use('/api/messages', messageRoutes);
   app.use('/api/subscriptions', subscriptionRoutes);
+  app.use('/api/wallet', walletRoutes);
+  app.use('/api/paystack', paystackWebhookRoutes);
+  app.use('/api/admin/withdrawals', adminWithdrawalRoutes);
   app.use('/api/user-dashboard', userDashboardRoutes);
   app.use('/api/landlord/dashboard', landlordDashboardRoutes);
   app.use('/api/hotel/dashboard', hotelDashboardRoutes);
