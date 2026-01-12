@@ -78,7 +78,7 @@ export const getAvailableDates = async (propertyId, startDate, endDate) => {
 export const isDateAvailable = async (propertyId, date) => {
   try {
     const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
-    
+
     const unavailableRecord = await PropertyAvailability.findOne({
       where: {
         propertyId,
@@ -306,9 +306,9 @@ export const getAvailabilityCalendar = async (propertyId, startDate, endDate) =>
     while (currentDate <= end) {
       const dateStr = currentDate.toISOString().split('T')[0];
       const isAvailable = !unavailableDateSet.has(dateStr);
-      
+
       const unavailableRecord = unavailableDates.find(d => d.date === dateStr);
-      
+
       calendar.push({
         date: dateStr,
         available: isAvailable,
@@ -345,6 +345,33 @@ export const getAvailabilityCalendar = async (propertyId, startDate, endDate) =>
  */
 export const checkDateRangeAvailability = async (propertyId, checkInDate, checkOutDate) => {
   try {
+    const property = await Property.findByPk(propertyId);
+    if (!property) throw new Error('Property not found');
+
+    // EXTERNAL CHECK (Amadeus)
+    if (property.source === 'amadeus' && property.externalId) {
+      console.log('🌐 [AVAILABILITY SERVICE] Checking real-time Amadeus availability...');
+      try {
+        const { default: amadeusService } = await import('./amadeusService.js');
+        const externalCheck = await amadeusService.checkAvailability(
+          property.externalId,
+          checkInDate,
+          checkOutDate
+        );
+
+        if (externalCheck.success && !externalCheck.available) {
+          console.log('❌ [AVAILABILITY SERVICE] External property is NOT available on Amadeus');
+          return {
+            available: false,
+            conflictingDates: [{ date: 'External', reason: 'Sold out on Amadeus' }],
+            totalNights: Math.ceil((new Date(checkOutDate) - new Date(checkInDate)) / (1000 * 60 * 60 * 24))
+          };
+        }
+      } catch (extErr) {
+        console.error('⚠️ [AVAILABILITY SERVICE] External check failed, continuing with local check:', extErr.message);
+      }
+    }
+
     const unavailableDates = await getUnavailableDates(propertyId, checkInDate, checkOutDate);
     const unavailableDateSet = new Set(unavailableDates.map(d => d.date));
 

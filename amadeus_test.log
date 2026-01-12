@@ -1,0 +1,282 @@
+✅ Expo Push API client initialized
+✅ Firebase Messaging initialized successfully
+🧪 Starting integration test for Booking.com...
+Executing (95fce395-252b-4d9b-ba4f-f3d3db3c0a75): START TRANSACTION;
+Executing (95fce395-252b-4d9b-ba4f-f3d3db3c0a75): SELECT `id`, `email`, `passwordHash`, `googleId`, `firstName`, `lastName`, `phone`, `avatarUrl`, `role`, `status`, `emailVerified`, `emailVerificationCode`, `emailVerificationExpires`, `passwordResetToken`, `passwordResetExpires`, `accountDeletionToken`, `accountDeletionExpires`, `phoneVerified`, `kycVerified`, `profileCompleted`, `dateOfBirth`, `gender`, `address`, `city`, `state`, `language`, `bio`, `socialLinks`, `preferences`, `lastLogin`, `loginCount`, `ipAddress`, `pushToken`, `deletedAt`, `createdAt`, `updatedAt` FROM `Users` AS `User` WHERE (`User`.`deletedAt` IS NULL AND `User`.`email` = 'test_integrator@example.com');
+Executing (95fce395-252b-4d9b-ba4f-f3d3db3c0a75): COMMIT;
+👤 Test User: 9935ef10-9470-4d36-92a9-9bdf8e338ab4
+Executing (default): INSERT INTO `properties` (`id`,`ownerId`,`title`,`slug`,`description`,`propertyType`,`listingType`,`status`,`price`,`currency`,`negotiable`,`address`,`city`,`state`,`country`,`petFriendly`,`smokingAllowed`,`furnished`,`minStayNights`,`instantBooking`,`cancellationPolicy`,`featured`,`viewCount`,`favoriteCount`,`contactCount`,`source`,`externalId`,`createdAt`,`updatedAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+🏨 External Property created: 9fec8212-9897-4539-b319-743676a3d76d
+📅 Attempting to book external property...
+🚀 [BOOKING SERVICE] Starting createBooking
+🚀 [BOOKING SERVICE] userId: 9935ef10-9470-4d36-92a9-9bdf8e338ab4
+🚀 [BOOKING SERVICE] bookingData: {
+  "propertyId": "9fec8212-9897-4539-b319-743676a3d76d",
+  "bookingType": "shortlet",
+  "checkInDate": "2026-02-01",
+  "checkOutDate": "2026-02-05",
+  "numberOfNights": 4,
+  "numberOfGuests": 2,
+  "basePrice": 50000,
+  "totalPrice": 200000,
+  "currency": "NGN",
+  "guestName": "Jane Doe",
+  "guestEmail": "jane@example.com"
+}
+🔍 [BOOKING SERVICE] Checking if user exists: 9935ef10-9470-4d36-92a9-9bdf8e338ab4
+Executing (default): SELECT `id`, `email`, `firstName`, `lastName`, `status` FROM `Users` AS `User` WHERE (`User`.`deletedAt` IS NULL AND `User`.`id` = '9935ef10-9470-4d36-92a9-9bdf8e338ab4');
+✅ User found: {
+  id: '9935ef10-9470-4d36-92a9-9bdf8e338ab4',
+  email: 'test_integrator@example.com',
+  status: 'active'
+}
+📋 [BOOKING SERVICE] Extracted booking data: {
+  propertyId: '9fec8212-9897-4539-b319-743676a3d76d',
+  bookingType: 'shortlet',
+  checkInDate: '2026-02-01',
+  checkOutDate: '2026-02-05',
+  inspectionDate: undefined,
+  inspectionTime: undefined,
+  numberOfNights: 4,
+  numberOfGuests: 2,
+  basePrice: 50000,
+  totalPrice: 200000,
+  currency: 'NGN',
+  serviceFee: 0,
+  taxAmount: 0,
+  discountAmount: 0,
+  guestName: 'Jane Doe',
+  guestPhone: undefined,
+  guestEmail: 'jane@example.com',
+  specialRequests: undefined
+}
+🔍 [BOOKING SERVICE] Fetching property: 9fec8212-9897-4539-b319-743676a3d76d
+Executing (default): SELECT `Property`.`id`, `Property`.`ownerId`, `Property`.`agentId`, `Property`.`title`, `Property`.`slug`, `Property`.`description`, `Property`.`shortDescription`, `Property`.`propertyType`, `Property`.`listingType`, `Property`.`status`, `Property`.`price`, `Property`.`originalPrice`, `Property`.`currency`, `Property`.`pricePeriod`, `Property`.`negotiable`, `Property`.`address`, `Property`.`city`, `Property`.`state`, `Property`.`country`, `Property`.`postalCode`, `Property`.`latitude`, `Property`.`longitude`, `Property`.`neighborhood`, `Property`.`landmark`, `Property`.`bedrooms`, `Property`.`bathrooms`, `Property`.`toilets`, `Property`.`parkingSpaces`, `Property`.`floorArea`, `Property`.`landArea`, `Property`.`floorNumber`, `Property`.`totalFloors`, `Property`.`yearBuilt`, `Property`.`conditionStatus`, `Property`.`features`, `Property`.`amenities`, `Property`.`petFriendly`, `Property`.`smokingAllowed`, `Property`.`furnished`, `Property`.`availableFrom`, `Property`.`availableUntil`, `Property`.`minLeasePeriod`, `Property`.`maxLeasePeriod`, `Property`.`minStayNights`, `Property`.`maxStayNights`, `Property`.`instantBooking`, `Property`.`cancellationPolicy`, `Property`.`featured`, `Property`.`featuredUntil`, `Property`.`viewCount`, `Property`.`favoriteCount`, `Property`.`contactCount`, `Property`.`approvedBy`, `Property`.`approvedAt`, `Property`.`rejectionReason`, `Property`.`moderationNotes`, `Property`.`tags`, `Property`.`seoTitle`, `Property`.`seoDescription`, `Property`.`seoKeywords`, `Property`.`source`, `Property`.`externalId`, `Property`.`externalData`, `Property`.`createdAt`, `Property`.`updatedAt`, `owner`.`id` AS `owner.id`, `owner`.`firstName` AS `owner.firstName`, `owner`.`lastName` AS `owner.lastName`, `owner`.`email` AS `owner.email`, `owner`.`status` AS `owner.status` FROM `properties` AS `Property` LEFT OUTER JOIN `Users` AS `owner` ON `Property`.`ownerId` = `owner`.`id` WHERE `Property`.`id` = '9fec8212-9897-4539-b319-743676a3d76d';
+✅ [BOOKING SERVICE] Property found: {
+  id: '9fec8212-9897-4539-b319-743676a3d76d',
+  title: 'Mock Amadeus Hotel',
+  ownerId: '9935ef10-9470-4d36-92a9-9bdf8e338ab4',
+  hasOwner: true
+}
+🔍 [BOOKING SERVICE] Checking availability for: {
+  propertyId: '9fec8212-9897-4539-b319-743676a3d76d',
+  checkInDate: '2026-02-01',
+  checkOutDate: '2026-02-05'
+}
+Executing (default): SELECT `id`, `propertyId`, `date`, `reason`, `bookingId`, `notes`, `isActive`, `createdBy`, `createdAt`, `updatedAt` FROM `property_availability` AS `PropertyAvailability` WHERE `PropertyAvailability`.`propertyId` = '9fec8212-9897-4539-b319-743676a3d76d' AND `PropertyAvailability`.`date` BETWEEN '2026-02-01' AND '2026-02-05' AND `PropertyAvailability`.`isActive` = true ORDER BY `PropertyAvailability`.`date` ASC;
+📊 [BOOKING SERVICE] Availability check result: { available: true, conflictingDates: [], totalNights: NaN }
+Executing (default): SELECT `id`, `propertyId`, `userId`, `ownerId`, `bookingType`, `status`, `checkInDate`, `checkOutDate`, `inspectionDate`, `inspectionTime`, `numberOfNights`, `numberOfGuests`, `basePrice`, `totalPrice`, `currency`, `serviceFee`, `taxAmount`, `discountAmount`, `paymentStatus`, `paymentMethod`, `transactionId`, `guestName`, `guestPhone`, `guestEmail`, `specialRequests`, `cancellationReason`, `cancelledBy`, `cancelledAt`, `ownerNotes`, `adminNotes`, `ipAddress`, `userAgent`, `metadata`, `externalBookingId`, `externalStatus`, `createdAt`, `updatedAt` FROM `bookings` AS `Booking` WHERE (`Booking`.`checkInDate` BETWEEN '2026-02-01' AND '2026-02-05' OR `Booking`.`checkOutDate` BETWEEN '2026-02-01' AND '2026-02-05' OR (`Booking`.`checkInDate` <= '2026-02-01' AND `Booking`.`checkOutDate` >= '2026-02-05')) AND `Booking`.`propertyId` = '9fec8212-9897-4539-b319-743676a3d76d' AND `Booking`.`status` IN ('confirmed', 'pending') LIMIT 1;
+✅ [BOOKING SERVICE] Property owner found: {
+  ownerId: '9935ef10-9470-4d36-92a9-9bdf8e338ab4',
+  ownerEmail: 'test_integrator@example.com'
+}
+Executing (003bb956-5010-462e-8aef-7de1dc946a34): START TRANSACTION;
+🔍 [BOOKING SERVICE] Re-verifying user within transaction: 9935ef10-9470-4d36-92a9-9bdf8e338ab4
+Executing (003bb956-5010-462e-8aef-7de1dc946a34): SELECT `id`, `email`, `status` FROM `Users` AS `User` WHERE (`User`.`deletedAt` IS NULL AND `User`.`id` = '9935ef10-9470-4d36-92a9-9bdf8e338ab4');
+✅ [BOOKING SERVICE] User verified within transaction: {
+  id: '9935ef10-9470-4d36-92a9-9bdf8e338ab4',
+  email: 'test_integrator@example.com',
+  status: 'active'
+}
+🔍 [BOOKING SERVICE] Verifying user exists in database table via raw SQL
+Executing (003bb956-5010-462e-8aef-7de1dc946a34): SELECT id, email, deletedAt FROM Users WHERE id = '9935ef10-9470-4d36-92a9-9bdf8e338ab4' AND deletedAt IS NULL
+✅ [BOOKING SERVICE] User verified in database table via raw SQL: {
+  id: '9935ef10-9470-4d36-92a9-9bdf8e338ab4',
+  email: 'test_integrator@example.com'
+}
+📝 [BOOKING SERVICE] Creating booking with data: {
+  userId: '9935ef10-9470-4d36-92a9-9bdf8e338ab4',
+  propertyId: '9fec8212-9897-4539-b319-743676a3d76d',
+  ownerId: '9935ef10-9470-4d36-92a9-9bdf8e338ab4',
+  bookingType: 'shortlet',
+  checkInDate: '2026-02-01',
+  checkOutDate: '2026-02-05',
+  inspectionDate: undefined,
+  inspectionTime: undefined,
+  numberOfNights: 4,
+  numberOfGuests: 2,
+  basePrice: 50000,
+  totalPrice: 200000,
+  currency: 'NGN',
+  serviceFee: 0,
+  taxAmount: 0,
+  discountAmount: 0
+}
+💾 [BOOKING SERVICE] Booking payload: {
+  "propertyId": "9fec8212-9897-4539-b319-743676a3d76d",
+  "userId": "9935ef10-9470-4d36-92a9-9bdf8e338ab4",
+  "ownerId": "9935ef10-9470-4d36-92a9-9bdf8e338ab4",
+  "bookingType": "shortlet",
+  "checkInDate": "2026-02-01",
+  "checkOutDate": "2026-02-05",
+  "inspectionDate": null,
+  "inspectionTime": null,
+  "numberOfNights": 4,
+  "numberOfGuests": 2,
+  "basePrice": 50000,
+  "totalPrice": 200000,
+  "currency": "NGN",
+  "serviceFee": 0,
+  "taxAmount": 0,
+  "discountAmount": 0,
+  "guestName": "Jane Doe",
+  "guestPhone": null,
+  "guestEmail": "jane@example.com",
+  "specialRequests": null,
+  "status": "pending",
+  "paymentStatus": "pending"
+}
+Executing (003bb956-5010-462e-8aef-7de1dc946a34): INSERT INTO `bookings` (`id`,`propertyId`,`userId`,`ownerId`,`bookingType`,`status`,`checkInDate`,`checkOutDate`,`inspectionDate`,`inspectionTime`,`numberOfNights`,`numberOfGuests`,`basePrice`,`totalPrice`,`currency`,`serviceFee`,`taxAmount`,`discountAmount`,`paymentStatus`,`guestName`,`guestPhone`,`guestEmail`,`specialRequests`,`createdAt`,`updatedAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+✅ [BOOKING SERVICE] Booking created successfully: 8f18a50a-1c4f-4328-933d-9737e5fbd145
+Executing (003bb956-5010-462e-8aef-7de1dc946a34): COMMIT;
+✅ [BOOKING SERVICE] Transaction committed successfully
+🌐 [BOOKING SERVICE] Property is external (amadeus). Synchronizing...
+🔑 [AMADEUS SERVICE] Generating new access token...
+🌐 [AMADEUS SERVICE] Creating external booking on Amadeus...
+❌ [AMADEUS SERVICE] Booking failed: {
+  errors: [
+    {
+      code: 38190,
+      title: 'Invalid access token',
+      detail: 'The access token provided in the Authorization header is invalid',
+      status: 401
+    }
+  ]
+}
+⚠️ [BOOKING SERVICE] External booking failed but local record preserved: Failed to synchronize booking with Amadeus
+Executing (default): SELECT `Booking`.`id`, `Booking`.`propertyId`, `Booking`.`userId`, `Booking`.`ownerId`, `Booking`.`bookingType`, `Booking`.`status`, `Booking`.`checkInDate`, `Booking`.`checkOutDate`, `Booking`.`inspectionDate`, `Booking`.`inspectionTime`, `Booking`.`numberOfNights`, `Booking`.`numberOfGuests`, `Booking`.`basePrice`, `Booking`.`totalPrice`, `Booking`.`currency`, `Booking`.`serviceFee`, `Booking`.`taxAmount`, `Booking`.`discountAmount`, `Booking`.`paymentStatus`, `Booking`.`paymentMethod`, `Booking`.`transactionId`, `Booking`.`guestName`, `Booking`.`guestPhone`, `Booking`.`guestEmail`, `Booking`.`specialRequests`, `Booking`.`cancellationReason`, `Booking`.`cancelledBy`, `Booking`.`cancelledAt`, `Booking`.`ownerNotes`, `Booking`.`adminNotes`, `Booking`.`ipAddress`, `Booking`.`userAgent`, `Booking`.`metadata`, `Booking`.`externalBookingId`, `Booking`.`externalStatus`, `Booking`.`createdAt`, `Booking`.`updatedAt`, `property`.`id` AS `property.id`, `property`.`ownerId` AS `property.ownerId`, `property`.`agentId` AS `property.agentId`, `property`.`title` AS `property.title`, `property`.`slug` AS `property.slug`, `property`.`description` AS `property.description`, `property`.`shortDescription` AS `property.shortDescription`, `property`.`propertyType` AS `property.propertyType`, `property`.`listingType` AS `property.listingType`, `property`.`status` AS `property.status`, `property`.`price` AS `property.price`, `property`.`originalPrice` AS `property.originalPrice`, `property`.`currency` AS `property.currency`, `property`.`pricePeriod` AS `property.pricePeriod`, `property`.`negotiable` AS `property.negotiable`, `property`.`address` AS `property.address`, `property`.`city` AS `property.city`, `property`.`state` AS `property.state`, `property`.`country` AS `property.country`, `property`.`postalCode` AS `property.postalCode`, `property`.`latitude` AS `property.latitude`, `property`.`longitude` AS `property.longitude`, `property`.`neighborhood` AS `property.neighborhood`, `property`.`landmark` AS `property.landmark`, `property`.`bedrooms` AS `property.bedrooms`, `property`.`bathrooms` AS `property.bathrooms`, `property`.`toilets` AS `property.toilets`, `property`.`parkingSpaces` AS `property.parkingSpaces`, `property`.`floorArea` AS `property.floorArea`, `property`.`landArea` AS `property.landArea`, `property`.`floorNumber` AS `property.floorNumber`, `property`.`totalFloors` AS `property.totalFloors`, `property`.`yearBuilt` AS `property.yearBuilt`, `property`.`conditionStatus` AS `property.conditionStatus`, `property`.`features` AS `property.features`, `property`.`amenities` AS `property.amenities`, `property`.`petFriendly` AS `property.petFriendly`, `property`.`smokingAllowed` AS `property.smokingAllowed`, `property`.`furnished` AS `property.furnished`, `property`.`availableFrom` AS `property.availableFrom`, `property`.`availableUntil` AS `property.availableUntil`, `property`.`minLeasePeriod` AS `property.minLeasePeriod`, `property`.`maxLeasePeriod` AS `property.maxLeasePeriod`, `property`.`minStayNights` AS `property.minStayNights`, `property`.`maxStayNights` AS `property.maxStayNights`, `property`.`instantBooking` AS `property.instantBooking`, `property`.`cancellationPolicy` AS `property.cancellationPolicy`, `property`.`featured` AS `property.featured`, `property`.`featuredUntil` AS `property.featuredUntil`, `property`.`viewCount` AS `property.viewCount`, `property`.`favoriteCount` AS `property.favoriteCount`, `property`.`contactCount` AS `property.contactCount`, `property`.`approvedBy` AS `property.approvedBy`, `property`.`approvedAt` AS `property.approvedAt`, `property`.`rejectionReason` AS `property.rejectionReason`, `property`.`moderationNotes` AS `property.moderationNotes`, `property`.`tags` AS `property.tags`, `property`.`seoTitle` AS `property.seoTitle`, `property`.`seoDescription` AS `property.seoDescription`, `property`.`seoKeywords` AS `property.seoKeywords`, `property`.`source` AS `property.source`, `property`.`externalId` AS `property.externalId`, `property`.`externalData` AS `property.externalData`, `property`.`createdAt` AS `property.createdAt`, `property`.`updatedAt` AS `property.updatedAt`, `property->owner`.`id` AS `property.owner.id`, `property->owner`.`firstName` AS `property.owner.firstName`, `property->owner`.`lastName` AS `property.owner.lastName`, `property->owner`.`email` AS `property.owner.email`, `property->owner`.`phone` AS `property.owner.phone`, `property->owner`.`avatarUrl` AS `property.owner.avatarUrl`, `user`.`id` AS `user.id`, `user`.`firstName` AS `user.firstName`, `user`.`lastName` AS `user.lastName`, `user`.`email` AS `user.email`, `user`.`phone` AS `user.phone`, `user`.`avatarUrl` AS `user.avatarUrl`, `owner`.`id` AS `owner.id`, `owner`.`firstName` AS `owner.firstName`, `owner`.`lastName` AS `owner.lastName`, `owner`.`email` AS `owner.email`, `owner`.`phone` AS `owner.phone`, `owner`.`avatarUrl` AS `owner.avatarUrl` FROM `bookings` AS `Booking` LEFT OUTER JOIN `properties` AS `property` ON `Booking`.`propertyId` = `property`.`id` LEFT OUTER JOIN `Users` AS `property->owner` ON `property`.`ownerId` = `property->owner`.`id` AND (`property->owner`.`deletedAt` IS NULL) LEFT OUTER JOIN `Users` AS `user` ON `Booking`.`userId` = `user`.`id` AND (`user`.`deletedAt` IS NULL) LEFT OUTER JOIN `Users` AS `owner` ON `Booking`.`ownerId` = `owner`.`id` AND (`owner`.`deletedAt` IS NULL) WHERE `Booking`.`id` = '8f18a50a-1c4f-4328-933d-9737e5fbd145';
+✅ [BOOKING SERVICE] Complete booking data: {
+  "id": "8f18a50a-1c4f-4328-933d-9737e5fbd145",
+  "propertyId": "9fec8212-9897-4539-b319-743676a3d76d",
+  "userId": "9935ef10-9470-4d36-92a9-9bdf8e338ab4",
+  "ownerId": "9935ef10-9470-4d36-92a9-9bdf8e338ab4",
+  "bookingType": "shortlet",
+  "status": "pending",
+  "checkInDate": "2026-02-01",
+  "checkOutDate": "2026-02-05",
+  "inspectionDate": null,
+  "inspectionTime": null,
+  "numberOfNights": 4,
+  "numberOfGuests": 2,
+  "basePrice": "50000.00",
+  "totalPrice": "200000.00",
+  "currency": "NGN",
+  "serviceFee": "0.00",
+  "taxAmount": "0.00",
+  "discountAmount": "0.00",
+  "paymentStatus": "pending",
+  "paymentMethod": null,
+  "transactionId": null,
+  "guestName": "Jane Doe",
+  "guestPhone": null,
+  "guestEmail": "jane@example.com",
+  "specialRequests": null,
+  "cancellationReason": null,
+  "cancelledBy": null,
+  "cancelledAt": null,
+  "ownerNotes": null,
+  "adminNotes": null,
+  "ipAddress": null,
+  "userAgent": null,
+  "metadata": null,
+  "externalBookingId": null,
+  "externalStatus": null,
+  "createdAt": "2026-01-11T20:57:35.000Z",
+  "updatedAt": "2026-01-11T20:57:35.000Z",
+  "property": {
+    "id": "9fec8212-9897-4539-b319-743676a3d76d",
+    "ownerId": "9935ef10-9470-4d36-92a9-9bdf8e338ab4",
+    "agentId": null,
+    "title": "Mock Amadeus Hotel",
+    "slug": "mock-amadeus-1768165053095",
+    "description": "A hotel from Amadeus API",
+    "shortDescription": null,
+    "propertyType": "hotel",
+    "listingType": "hotel",
+    "status": "draft",
+    "price": "60000.00",
+    "originalPrice": null,
+    "currency": "NGN",
+    "pricePeriod": null,
+    "negotiable": false,
+    "address": "456 Amadeus Blvd",
+    "city": "London",
+    "state": "Greater London",
+    "country": "UK",
+    "postalCode": null,
+    "latitude": null,
+    "longitude": null,
+    "neighborhood": null,
+    "landmark": null,
+    "bedrooms": null,
+    "bathrooms": null,
+    "toilets": null,
+    "parkingSpaces": null,
+    "floorArea": null,
+    "landArea": null,
+    "floorNumber": null,
+    "totalFloors": null,
+    "yearBuilt": null,
+    "conditionStatus": null,
+    "features": null,
+    "amenities": null,
+    "petFriendly": false,
+    "smokingAllowed": false,
+    "furnished": false,
+    "availableFrom": null,
+    "availableUntil": null,
+    "minLeasePeriod": null,
+    "maxLeasePeriod": null,
+    "minStayNights": 1,
+    "maxStayNights": null,
+    "instantBooking": false,
+    "cancellationPolicy": "moderate",
+    "featured": false,
+    "featuredUntil": null,
+    "viewCount": 0,
+    "favoriteCount": 0,
+    "contactCount": 0,
+    "approvedBy": null,
+    "approvedAt": null,
+    "rejectionReason": null,
+    "moderationNotes": null,
+    "tags": null,
+    "seoTitle": null,
+    "seoDescription": null,
+    "seoKeywords": null,
+    "source": "amadeus",
+    "externalId": "AMA_12345",
+    "externalData": null,
+    "createdAt": "2026-01-11T20:57:33.000Z",
+    "updatedAt": "2026-01-11T20:57:33.000Z",
+    "owner": {
+      "id": "9935ef10-9470-4d36-92a9-9bdf8e338ab4",
+      "firstName": "Test",
+      "lastName": "Integrator",
+      "email": "test_integrator@example.com",
+      "phone": null,
+      "avatarUrl": null
+    }
+  },
+  "user": {
+    "id": "9935ef10-9470-4d36-92a9-9bdf8e338ab4",
+    "firstName": "Test",
+    "lastName": "Integrator",
+    "email": "test_integrator@example.com",
+    "phone": null,
+    "avatarUrl": null
+  },
+  "owner": {
+    "id": "9935ef10-9470-4d36-92a9-9bdf8e338ab4",
+    "firstName": "Test",
+    "lastName": "Integrator",
+    "email": "test_integrator@example.com",
+    "phone": null,
+    "avatarUrl": null
+  }
+}
+✅ Local booking created: 8f18a50a-1c4f-4328-933d-9737e5fbd145
+Executing (default): SELECT `id`, `propertyId`, `userId`, `ownerId`, `bookingType`, `status`, `checkInDate`, `checkOutDate`, `inspectionDate`, `inspectionTime`, `numberOfNights`, `numberOfGuests`, `basePrice`, `totalPrice`, `currency`, `serviceFee`, `taxAmount`, `discountAmount`, `paymentStatus`, `paymentMethod`, `transactionId`, `guestName`, `guestPhone`, `guestEmail`, `specialRequests`, `cancellationReason`, `cancelledBy`, `cancelledAt`, `ownerNotes`, `adminNotes`, `ipAddress`, `userAgent`, `metadata`, `externalBookingId`, `externalStatus`, `createdAt`, `updatedAt` FROM `bookings` AS `Booking` WHERE `Booking`.`id` = '8f18a50a-1c4f-4328-933d-9737e5fbd145';
+🔗 External Booking ID: null
+📊 External Status: null
+❌ Integration failed: No externalBookingId found.

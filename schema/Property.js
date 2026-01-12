@@ -52,7 +52,7 @@ const Property = sequelize.define('Property', {
     allowNull: true
   },
   propertyType: {
-    type: DataTypes.ENUM('apartment', 'house', 'villa', 'condo', 'studio', 'penthouse', 'townhouse', 'duplex', 'bungalow', 'land', 'commercial', 'office', 'shop', 'warehouse'),
+    type: DataTypes.ENUM('apartment', 'house', 'villa', 'condo', 'studio', 'penthouse', 'townhouse', 'duplex', 'bungalow', 'land', 'commercial', 'office', 'shop', 'warehouse', 'hotel'),
     allowNull: false
   },
   listingType: {
@@ -90,7 +90,7 @@ const Property = sequelize.define('Property', {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
-  
+
   // Location details
   address: {
     type: DataTypes.TEXT,
@@ -128,7 +128,7 @@ const Property = sequelize.define('Property', {
     type: DataTypes.STRING(200),
     allowNull: true
   },
-  
+
   // Property details
   bedrooms: {
     type: DataTypes.INTEGER,
@@ -182,7 +182,7 @@ const Property = sequelize.define('Property', {
     type: DataTypes.ENUM('new', 'excellent', 'good', 'fair', 'needs_renovation'),
     allowNull: true
   },
-  
+
   // Features and amenities
   features: {
     type: DataTypes.JSON,
@@ -204,7 +204,7 @@ const Property = sequelize.define('Property', {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
-  
+
   // Availability
   availableFrom: {
     type: DataTypes.DATEONLY,
@@ -222,7 +222,7 @@ const Property = sequelize.define('Property', {
     type: DataTypes.INTEGER,
     allowNull: true
   },
-  
+
   // Shortlet specific
   minStayNights: {
     type: DataTypes.INTEGER,
@@ -243,7 +243,7 @@ const Property = sequelize.define('Property', {
     type: DataTypes.ENUM('flexible', 'moderate', 'strict', 'super_strict'),
     defaultValue: 'moderate'
   },
-  
+
   // SEO and visibility
   featured: {
     type: DataTypes.BOOLEAN,
@@ -265,7 +265,7 @@ const Property = sequelize.define('Property', {
     type: DataTypes.INTEGER,
     defaultValue: 0
   },
-  
+
   // Approval and moderation
   approvedBy: {
     type: DataTypes.UUID,
@@ -287,7 +287,7 @@ const Property = sequelize.define('Property', {
     type: DataTypes.TEXT,
     allowNull: true
   },
-  
+
   // Metadata
   tags: {
     type: DataTypes.JSON,
@@ -306,6 +306,23 @@ const Property = sequelize.define('Property', {
     type: DataTypes.JSON,
     allowNull: true,
     comment: 'Array of SEO keywords stored as JSON'
+  },
+
+  // External integration details
+  source: {
+    type: DataTypes.ENUM('local', 'booking_com', 'expedia', 'amadeus'),
+    defaultValue: 'local',
+    allowNull: false
+  },
+  externalId: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    comment: 'ID of the property in the external system'
+  },
+  externalData: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    comment: 'Raw synchronization data from external API'
   }
 }, {
   timestamps: true,

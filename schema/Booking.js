@@ -33,7 +33,7 @@ const Booking = sequelize.define('Booking', {
     }
   },
   bookingType: {
-    type: DataTypes.ENUM('shortlet', 'rental', 'sale_inspection'),
+    type: DataTypes.ENUM('shortlet', 'rental', 'hotel', 'sale_inspection'),
     allowNull: false
   },
   status: {
@@ -41,7 +41,7 @@ const Booking = sequelize.define('Booking', {
     defaultValue: 'pending',
     allowNull: false
   },
-  
+
   // Dates
   checkInDate: {
     type: DataTypes.DATEONLY,
@@ -59,7 +59,7 @@ const Booking = sequelize.define('Booking', {
     type: DataTypes.STRING(5), // Store as HH:MM string format
     allowNull: true
   },
-  
+
   // Duration
   numberOfNights: {
     type: DataTypes.INTEGER,
@@ -75,7 +75,7 @@ const Booking = sequelize.define('Booking', {
       min: 1
     }
   },
-  
+
   // Pricing
   basePrice: {
     type: DataTypes.DECIMAL(12, 2),
@@ -101,7 +101,7 @@ const Booking = sequelize.define('Booking', {
     type: DataTypes.DECIMAL(12, 2),
     defaultValue: 0
   },
-  
+
   // Payment
   paymentStatus: {
     type: DataTypes.ENUM('pending', 'partial', 'completed', 'failed', 'refunded'),
@@ -115,7 +115,7 @@ const Booking = sequelize.define('Booking', {
     type: DataTypes.STRING(100),
     allowNull: true
   },
-  
+
   // Guest details
   guestName: {
     type: DataTypes.STRING(200),
@@ -133,7 +133,7 @@ const Booking = sequelize.define('Booking', {
     type: DataTypes.TEXT,
     allowNull: true
   },
-  
+
   // Cancellation
   cancellationReason: {
     type: DataTypes.TEXT,
@@ -151,7 +151,7 @@ const Booking = sequelize.define('Booking', {
     type: DataTypes.DATE,
     allowNull: true
   },
-  
+
   // Notes
   ownerNotes: {
     type: DataTypes.TEXT,
@@ -161,7 +161,7 @@ const Booking = sequelize.define('Booking', {
     type: DataTypes.TEXT,
     allowNull: true
   },
-  
+
   // Metadata
   ipAddress: {
     type: DataTypes.STRING(45),
@@ -173,6 +173,16 @@ const Booking = sequelize.define('Booking', {
   },
   metadata: {
     type: DataTypes.JSON,
+    allowNull: true
+  },
+
+  // External platform booking details
+  externalBookingId: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
+  externalStatus: {
+    type: DataTypes.STRING(100),
     allowNull: true
   }
 }, {

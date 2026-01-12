@@ -1,7 +1,7 @@
 import express from 'express';
 import * as bookingController from '../controllers/bookingController.js';
 import { authenticateToken, requireRole } from '../middlewares/authMiddleware.js';
-import { 
+import {
   bookingIdValidation,
   propertyIdValidation,
   createBookingValidation,
@@ -47,7 +47,7 @@ const handleValidationErrors = (req, res, next) => {
  *           format: uuid
  *         bookingType:
  *           type: string
- *           enum: [shortlet, rental, sale_inspection]
+ *           enum: [shortlet, rental, hotel, sale_inspection]
  *         status:
  *           type: string
  *           enum: [pending, confirmed, cancelled, completed, rejected, expired]
@@ -135,7 +135,7 @@ const handleValidationErrors = (req, res, next) => {
  *           format: uuid
  *         bookingType:
  *           type: string
- *           enum: [shortlet, rental, sale_inspection]
+ *           enum: [shortlet, rental, hotel, sale_inspection]
  *         checkInDate:
  *           type: string
  *           format: date
@@ -262,7 +262,7 @@ const handleValidationErrors = (req, res, next) => {
  *       500:
  *         description: Internal server error
  */
-router.post('/', 
+router.post('/',
   authenticateToken,
   createBookingValidation,
   handleValidationErrors,
@@ -303,7 +303,7 @@ router.post('/',
  *         name: bookingType
  *         schema:
  *           type: string
- *           enum: [shortlet, rental, sale_inspection]
+ *           enum: [shortlet, rental, hotel, sale_inspection]
  *         description: Filter by booking type
  *       - in: query
  *         name: paymentStatus
@@ -349,7 +349,7 @@ router.post('/',
  *       500:
  *         description: Internal server error
  */
-router.get('/', 
+router.get('/',
   authenticateToken,
   getBookingsValidation,
   handleValidationErrors,
@@ -391,7 +391,7 @@ router.get('/',
  *       500:
  *         description: Internal server error
  */
-router.get('/statistics', 
+router.get('/statistics',
   authenticateToken,
   bookingController.getBookingStatistics
 );
@@ -428,7 +428,7 @@ router.get('/statistics',
  *       500:
  *         description: Internal server error
  */
-router.get('/:bookingId', 
+router.get('/:bookingId',
   authenticateToken,
   bookingIdValidation,
   handleValidationErrors,
@@ -531,7 +531,7 @@ router.get('/:bookingId',
  *       500:
  *         description: Internal server error
  */
-router.put('/:bookingId', 
+router.put('/:bookingId',
   authenticateToken,
   bookingIdValidation,
   updateBookingValidation,
@@ -583,7 +583,7 @@ router.put('/:bookingId',
  *       500:
  *         description: Internal server error
  */
-router.post('/:bookingId/cancel', 
+router.post('/:bookingId/cancel',
   authenticateToken,
   bookingIdValidation,
   cancelBookingValidation,
@@ -635,7 +635,7 @@ router.post('/:bookingId/cancel',
  *       500:
  *         description: Internal server error
  */
-router.post('/:bookingId/confirm', 
+router.post('/:bookingId/confirm',
   authenticateToken,
   bookingIdValidation,
   handleValidationErrors,
@@ -686,7 +686,7 @@ router.post('/:bookingId/confirm',
  *       500:
  *         description: Internal server error
  */
-router.post('/:bookingId/reject', 
+router.post('/:bookingId/reject',
   authenticateToken,
   bookingIdValidation,
   handleValidationErrors,
@@ -737,7 +737,7 @@ router.post('/:bookingId/reject',
  *       500:
  *         description: Internal server error
  */
-router.post('/:bookingId/complete', 
+router.post('/:bookingId/complete',
   authenticateToken,
   bookingIdValidation,
   handleValidationErrors,
@@ -785,7 +785,7 @@ router.post('/:bookingId/complete',
  *         name: bookingType
  *         schema:
  *           type: string
- *           enum: [shortlet, rental, sale_inspection]
+ *           enum: [shortlet, rental, hotel, sale_inspection]
  *         description: Filter by booking type
  *       - in: query
  *         name: paymentStatus
@@ -835,7 +835,7 @@ router.post('/:bookingId/complete',
  *       500:
  *         description: Internal server error
  */
-router.get('/properties/:propertyId/bookings', 
+router.get('/properties/:propertyId/bookings',
   authenticateToken,
   propertyIdValidation,
   getBookingsValidation,
@@ -876,7 +876,7 @@ router.get('/properties/:propertyId/bookings',
  *       500:
  *         description: Internal server error
  */
-router.get('/:id/download-receipt', 
+router.get('/:id/download-receipt',
   authenticateToken,
   param('id').isUUID().withMessage('Invalid booking ID'),
   handleValidationErrors,

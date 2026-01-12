@@ -21,11 +21,11 @@ const PropertyMedia = sequelize.define('PropertyMedia', {
     allowNull: false
   },
   url: {
-    type: DataTypes.STRING(500),
+    type: DataTypes.TEXT,
     allowNull: false
   },
   thumbnailUrl: {
-    type: DataTypes.STRING(500),
+    type: DataTypes.TEXT,
     allowNull: true
   },
   filename: {

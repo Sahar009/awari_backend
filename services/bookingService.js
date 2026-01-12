@@ -2,16 +2,17 @@ import Booking from '../schema/Booking.js';
 import Property from '../schema/Property.js';
 import User from '../schema/User.js';
 import { Op } from 'sequelize';
-import { 
-  blockDatesForBooking, 
-  unblockDatesForBooking, 
-  checkDateRangeAvailability 
+import {
+  blockDatesForBooking,
+  unblockDatesForBooking,
+  checkDateRangeAvailability
 } from './availabilityService.js';
 import { sendTemplateNotification } from './notificationService.js';
 import { sendEmail } from '../modules/notifications/email.js';
 import Payment from '../schema/Payment.js';
 import sequelize from '../database/db.js';
 import { generateBookingReceiptPDF } from './pdfService.js';
+import amadeusService from './amadeusService.js';
 
 /**
  * Create a new booking
@@ -23,7 +24,7 @@ export const createBooking = async (userId, bookingData) => {
   console.log('🚀 [BOOKING SERVICE] Starting createBooking');
   console.log('🚀 [BOOKING SERVICE] userId:', userId);
   console.log('🚀 [BOOKING SERVICE] bookingData:', JSON.stringify(bookingData, null, 2));
-  
+
   try {
     // Verify user exists
     if (!userId) {
@@ -36,19 +37,19 @@ export const createBooking = async (userId, bookingData) => {
     }
 
     console.log('🔍 [BOOKING SERVICE] Checking if user exists:', userId);
-    const user = await User.findByPk(userId, { 
+    const user = await User.findByPk(userId, {
       paranoid: true,
       attributes: ['id', 'email', 'firstName', 'lastName', 'status']
     });
-    
+
     if (!user) {
       console.error('❌ User not found in database:', userId);
       console.error('🔍 Attempting to find user without paranoid mode...');
-      const userWithoutParanoid = await User.findByPk(userId, { 
+      const userWithoutParanoid = await User.findByPk(userId, {
         paranoid: false,
         attributes: ['id', 'email', 'firstName', 'lastName', 'status', 'deletedAt']
       });
-      
+
       if (userWithoutParanoid) {
         console.error('⚠️ User exists but is soft-deleted:', {
           id: userWithoutParanoid.id,
@@ -60,7 +61,7 @@ export const createBooking = async (userId, bookingData) => {
           statusCode: 403
         };
       }
-      
+
       return {
         success: false,
         message: 'User not found. Please log in again.',
@@ -146,12 +147,12 @@ export const createBooking = async (userId, bookingData) => {
     });
 
     // Check for conflicting bookings and availability
-    if (bookingType === 'shortlet' || bookingType === 'rental') {
+    if (bookingType === 'shortlet' || bookingType === 'rental' || bookingType === 'hotel') {
       console.log('🔍 [BOOKING SERVICE] Checking availability for:', { propertyId, checkInDate, checkOutDate });
       // Check availability using the new availability service
       const availabilityCheck = await checkDateRangeAvailability(propertyId, checkInDate, checkOutDate);
       console.log('📊 [BOOKING SERVICE] Availability check result:', availabilityCheck);
-      
+
       if (!availabilityCheck.available) {
         return {
           success: false,
@@ -208,14 +209,14 @@ export const createBooking = async (userId, bookingData) => {
           ownerId: property.ownerId
         }
       });
-      
+
       // Try to fetch owner directly to see if it exists but wasn't included
       if (property.ownerId) {
         const ownerCheck = await User.findByPk(property.ownerId, {
           paranoid: false,
           attributes: ['id', 'email', 'status', 'deletedAt']
         });
-        
+
         if (ownerCheck) {
           if (ownerCheck.deletedAt) {
             return {
@@ -233,14 +234,14 @@ export const createBooking = async (userId, bookingData) => {
           }
         }
       }
-      
+
       return {
         success: false,
         message: 'Property owner information is missing. Please contact support.',
         statusCode: 400
       };
     }
-    
+
     // Check if owner is soft-deleted or inactive
     if (property.owner.deletedAt) {
       return {
@@ -249,7 +250,7 @@ export const createBooking = async (userId, bookingData) => {
         statusCode: 400
       };
     }
-    
+
     if (property.owner.status !== 'active') {
       return {
         success: false,
@@ -265,28 +266,28 @@ export const createBooking = async (userId, bookingData) => {
 
     // Use transaction to ensure atomicity and prevent race conditions
     const transaction = await sequelize.transaction();
-    
+
     try {
       // Re-verify user exists within transaction to prevent race conditions
       console.log('🔍 [BOOKING SERVICE] Re-verifying user within transaction:', userId);
-      
+
       // First, verify user exists using Sequelize
-      const userInTransaction = await User.findByPk(userId, { 
+      const userInTransaction = await User.findByPk(userId, {
         paranoid: true,
         attributes: ['id', 'email', 'status'],
         transaction
       });
-      
+
       if (!userInTransaction) {
         console.error('❌ [BOOKING SERVICE] User not found within transaction:', userId);
         await transaction.rollback();
-        
+
         // Check if user is soft-deleted
-        const userWithoutParanoid = await User.findByPk(userId, { 
+        const userWithoutParanoid = await User.findByPk(userId, {
           paranoid: false,
           attributes: ['id', 'email', 'deletedAt', 'status']
         });
-        
+
         if (userWithoutParanoid && userWithoutParanoid.deletedAt) {
           return {
             success: false,
@@ -294,24 +295,24 @@ export const createBooking = async (userId, bookingData) => {
             statusCode: 403
           };
         }
-        
+
         return {
           success: false,
           message: 'User account not found. Please log in again.',
           statusCode: 404
         };
       }
-      
+
       console.log('✅ [BOOKING SERVICE] User verified within transaction:', {
         id: userInTransaction.id,
         email: userInTransaction.email,
         status: userInTransaction.status
       });
-      
+
       // Double-check user exists in the exact table the foreign key references
       // The foreign key constraint references 'Users' table (capitalized), verify user exists
       console.log('🔍 [BOOKING SERVICE] Verifying user exists in database table via raw SQL');
-      
+
       // Check user existence using raw SQL (use capitalized 'Users' table name - matches User model tableName)
       const [userCheckResult] = await sequelize.query(
         'SELECT id, email, deletedAt FROM Users WHERE id = ? AND deletedAt IS NULL',
@@ -321,11 +322,11 @@ export const createBooking = async (userId, bookingData) => {
           transaction
         }
       );
-      
+
       if (!userCheckResult) {
         console.error('❌ [BOOKING SERVICE] User not found in database table via raw SQL:', userId);
         await transaction.rollback();
-        
+
         // Check if user exists but is soft-deleted
         const [deletedUserCheck] = await sequelize.query(
           'SELECT id, email, deletedAt FROM Users WHERE id = ?',
@@ -335,7 +336,7 @@ export const createBooking = async (userId, bookingData) => {
             transaction
           }
         );
-        
+
         if (deletedUserCheck && deletedUserCheck.deletedAt) {
           return {
             success: false,
@@ -343,14 +344,14 @@ export const createBooking = async (userId, bookingData) => {
             statusCode: 403
           };
         }
-        
+
         return {
           success: false,
           message: 'User account not found in database. Please log in again.',
           statusCode: 404
         };
       }
-      
+
       console.log('✅ [BOOKING SERVICE] User verified in database table via raw SQL:', {
         id: userCheckResult.id,
         email: userCheckResult.email
@@ -375,7 +376,7 @@ export const createBooking = async (userId, bookingData) => {
         taxAmount: taxAmount ? Number(taxAmount) : 0,
         discountAmount: discountAmount ? Number(discountAmount) : 0
       });
-      
+
       const bookingPayload = {
         propertyId,
         userId: userInTransaction.id, // Use the verified user ID from transaction
@@ -400,15 +401,43 @@ export const createBooking = async (userId, bookingData) => {
         status: 'pending',
         paymentStatus: 'pending'
       };
-      
+
       console.log('💾 [BOOKING SERVICE] Booking payload:', JSON.stringify(bookingPayload, null, 2));
       const booking = await Booking.create(bookingPayload, { transaction });
       console.log('✅ [BOOKING SERVICE] Booking created successfully:', booking.id);
-      
+
       // Commit transaction
       await transaction.commit();
       console.log('✅ [BOOKING SERVICE] Transaction committed successfully');
-      
+
+      // HANDLE EXTERNAL BOOKING AFTER LOCAL SUCCESS
+      if (property.source === 'amadeus' || property.source === 'booking_com') {
+        console.log(`🌐 [BOOKING SERVICE] Property is external (${property.source}). Synchronizing...`);
+        try {
+          // Both currently use similar adapter patterns
+          const service = property.source === 'amadeus' ? amadeusService : null;
+
+          if (service) {
+            const externalResult = await service.createBooking({
+              ...bookingPayload,
+              localBookingId: booking.id
+            });
+
+            if (externalResult.success) {
+              console.log('✅ [BOOKING SERVICE] External booking successful:', externalResult.externalBookingId);
+              await booking.update({
+                externalBookingId: externalResult.externalBookingId,
+                externalStatus: externalResult.externalStatus || 'confirmed'
+              });
+            } else {
+              console.warn('⚠️ [BOOKING SERVICE] External booking failed but local record preserved:', externalResult.message);
+            }
+          }
+        } catch (externalError) {
+          console.error('❌ [BOOKING SERVICE] Error during external synchronization:', externalError);
+        }
+      }
+
       // Fetch the complete booking with relations
       const completeBooking = await Booking.findByPk(booking.id, {
         include: [
@@ -435,9 +464,9 @@ export const createBooking = async (userId, bookingData) => {
           }
         ]
       });
-      
+
       console.log('✅ [BOOKING SERVICE] Complete booking data:', JSON.stringify(completeBooking?.toJSON(), null, 2));
-      
+
       return {
         success: true,
         message: 'Booking created successfully',
@@ -450,7 +479,7 @@ export const createBooking = async (userId, bookingData) => {
         await transaction.rollback();
         console.error('❌ [BOOKING SERVICE] Transaction rolled back due to error');
       }
-      
+
       console.error('❌ [BOOKING SERVICE] Error creating booking:', error);
       console.error('❌ [BOOKING SERVICE] Error name:', error.name);
       console.error('❌ [BOOKING SERVICE] Error message:', error.message);
@@ -463,7 +492,7 @@ export const createBooking = async (userId, bookingData) => {
         value: error.value,
         original: error.original
       });
-      
+
       // Check if it's a foreign key constraint error
       if (error.name === 'SequelizeForeignKeyConstraintError') {
         console.error('🔍 Foreign key constraint error details:', {
@@ -473,19 +502,19 @@ export const createBooking = async (userId, bookingData) => {
           index: error.index,
           original: error.original
         });
-        
+
         // If it's the userId foreign key, verify user exists
         if (error.fields && error.fields.includes('userId')) {
           console.error('🔍 [BOOKING SERVICE] userId foreign key constraint failed');
           console.error('🔍 [BOOKING SERVICE] Attempted userId:', userId);
           console.error('🔍 [BOOKING SERVICE] userId type:', typeof userId);
           console.error('🔍 [BOOKING SERVICE] userId length:', userId?.length);
-          
-          const userCheck = await User.findByPk(userId, { 
+
+          const userCheck = await User.findByPk(userId, {
             paranoid: false,
             attributes: ['id', 'email', 'deletedAt', 'status']
           });
-          
+
           if (!userCheck) {
             console.error('❌ [BOOKING SERVICE] User does not exist in database');
             return {
@@ -507,7 +536,7 @@ export const createBooking = async (userId, bookingData) => {
             console.error('⚠️ [BOOKING SERVICE] User ID length from DB:', userCheck.id?.length);
             console.error('⚠️ [BOOKING SERVICE] IDs match:', userCheck.id === userId);
             console.error('⚠️ [BOOKING SERVICE] IDs match (string):', String(userCheck.id) === String(userId));
-            
+
             return {
               success: false,
               message: 'User account validation failed. Please log out and log in again.',
@@ -515,16 +544,16 @@ export const createBooking = async (userId, bookingData) => {
             };
           }
         }
-        
+
         // If it's the propertyId foreign key
         if (error.fields && error.fields.includes('propertyId')) {
-            return {
-              success: false,
+          return {
+            success: false,
             message: 'Property not found or invalid',
             statusCode: 404
           };
         }
-        
+
         // If it's the ownerId foreign key
         if (error.fields && error.fields.includes('ownerId')) {
           return {
@@ -533,7 +562,7 @@ export const createBooking = async (userId, bookingData) => {
             statusCode: 404
           };
         }
-        
+
         return {
           success: false,
           message: error.message || 'Database constraint error. Please check your data.',
@@ -541,7 +570,7 @@ export const createBooking = async (userId, bookingData) => {
           statusCode: 400
         };
       }
-      
+
       // Handle validation errors
       if (error.name === 'SequelizeValidationError') {
         const validationErrors = error.errors.map((err) => ({
@@ -556,7 +585,7 @@ export const createBooking = async (userId, bookingData) => {
           statusCode: 400
         };
       }
-      
+
       // Re-throw other errors to be caught by outer catch
       throw error;
     }
@@ -972,16 +1001,39 @@ export const cancelBooking = async (bookingId, userId, cancellationReason = null
       };
     }
 
+    // Process refund if payment was made
+    let refundProcessed = false;
+    if (['completed', 'partial'].includes(booking.paymentStatus) && booking.totalPrice > 0) {
+      try {
+        console.log(`💰 Processing refund for booking ${bookingId}, amount: ${booking.totalPrice}`);
+
+        const walletService = (await import('./walletService.js')).default;
+        await walletService.processRefund(
+          booking.userId,
+          booking.totalPrice,
+          `Refund for cancelled booking #${bookingId.substring(0, 8)}`,
+          bookingId
+        );
+
+        refundProcessed = true;
+        console.log(`✅ Refund processed successfully for booking ${bookingId}`);
+      } catch (refundError) {
+        console.error('❌ Error processing refund for cancelled booking:', refundError);
+        // Continue with cancellation even if refund fails
+      }
+    }
+
     // Update booking status
     await booking.update({
       status: 'cancelled',
+      paymentStatus: refundProcessed ? 'refunded' : booking.paymentStatus,
       cancellationReason,
       cancelledBy: userId,
       cancelledAt: new Date()
     });
 
     // Unblock dates for the cancelled booking
-    if (booking.bookingType === 'shortlet' || booking.bookingType === 'rental') {
+    if (booking.bookingType === 'shortlet' || booking.bookingType === 'rental' || booking.bookingType === 'hotel') {
       try {
         await unblockDatesForBooking(booking.propertyId, booking.id);
       } catch (availabilityError) {
@@ -1031,6 +1083,46 @@ export const cancelBooking = async (bookingId, userId, cancellationReason = null
           booking: updatedBooking,
           property: updatedBooking.property
         });
+
+        // Send refund email if refund was processed
+        if (refundProcessed) {
+          const { sendEmail } = await import('../modules/notifications/email.js');
+          await sendEmail({
+            to: guest.email,
+            subject: 'Booking Cancelled - Refund Processed 💰',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #10b981;">Booking Cancelled & Refunded</h2>
+                <p>Dear ${guest.firstName},</p>
+                <p>Your booking has been cancelled and a full refund has been processed to your wallet.</p>
+                
+                <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                  <h3 style="margin-top: 0;">Booking Details:</h3>
+                  <p><strong>Property:</strong> ${updatedBooking.property?.title || 'N/A'}</p>
+                  <p><strong>Booking ID:</strong> #${bookingId.substring(0, 8)}</p>
+                  <p><strong>Check-in:</strong> ${new Date(updatedBooking.checkInDate).toLocaleDateString()}</p>
+                  <p><strong>Check-out:</strong> ${new Date(updatedBooking.checkOutDate).toLocaleDateString()}</p>
+                  ${cancellationReason ? `<p><strong>Reason:</strong> ${cancellationReason}</p>` : ''}
+                </div>
+                
+                <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+                  <h3 style="margin-top: 0; color: #10b981;">Refund Processed</h3>
+                  <p style="margin: 0;"><strong>Amount Refunded:</strong> ₦${parseFloat(booking.totalPrice).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                  <p style="margin: 10px 0 0 0;">The funds have been credited to your AWARI wallet and are available for immediate use.</p>
+                </div>
+                
+                <p>You can view your wallet balance and transaction history in your profile.</p>
+                <p>We're sorry to see this booking cancelled. We hope to serve you again soon!</p>
+                
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
+                <p style="color: #6b7280; font-size: 12px;">
+                  If you have any questions, please contact our support team.
+                </p>
+              </div>
+            `
+          });
+          console.log('✅ Refund notification email sent to user');
+        }
       }
     } catch (notificationError) {
       console.error('Error sending booking cancellation notification:', notificationError);
@@ -1096,7 +1188,7 @@ export const confirmBooking = async (bookingId, userId, ownerNotes = null) => {
     });
 
     // Block dates for the confirmed booking
-    if (booking.bookingType === 'shortlet' || booking.bookingType === 'rental') {
+    if (booking.bookingType === 'shortlet' || booking.bookingType === 'rental' || booking.bookingType === 'hotel') {
       try {
         await blockDatesForBooking(
           booking.propertyId,
@@ -1366,8 +1458,8 @@ export const getBookingStatistics = async (userId, type = 'user') => {
       Booking.count({ where: { ...whereClause, status: 'completed' } }),
       Booking.count({ where: { ...whereClause, status: 'cancelled' } }),
       Booking.count({ where: { ...whereClause, status: 'rejected' } }),
-      Booking.sum('totalPrice', { 
-        where: { ...whereClause, status: 'completed' } 
+      Booking.sum('totalPrice', {
+        where: { ...whereClause, status: 'completed' }
       })
     ]);
 
@@ -1379,7 +1471,7 @@ export const getBookingStatistics = async (userId, type = 'user') => {
       cancelled: cancelledBookings,
       rejected: rejectedBookings,
       totalRevenue: totalRevenue || 0,
-      successRate: totalBookings > 0 ? 
+      successRate: totalBookings > 0 ?
         Math.round(((completedBookings + confirmedBookings) / totalBookings) * 100) : 0
     };
 
@@ -1506,7 +1598,7 @@ export const downloadBookingReceipt = async (bookingId, userId) => {
     };
   } catch (error) {
     console.error('Error downloading booking receipt:', error);
-    
+
     if (error.message === 'Booking not found') {
       return {
         success: false,
@@ -1514,7 +1606,7 @@ export const downloadBookingReceipt = async (bookingId, userId) => {
         statusCode: 404
       };
     }
-    
+
     if (error.message === 'Unauthorized access to booking') {
       return {
         success: false,
