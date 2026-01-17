@@ -163,12 +163,11 @@ export const createBooking = async (userId, bookingData) => {
       }
 
       // Also check for existing confirmed bookings as a fallback
+      // Only check 'confirmed' status to avoid conflicts with user's own pending bookings
       const conflictingBooking = await Booking.findOne({
         where: {
           propertyId,
-          status: {
-            [Op.in]: ['confirmed', 'pending']
-          },
+          status: 'confirmed', // Only check confirmed bookings, not pending
           [Op.or]: [
             {
               checkInDate: {
@@ -189,6 +188,7 @@ export const createBooking = async (userId, bookingData) => {
       });
 
       if (conflictingBooking) {
+        console.log('❌ [BOOKING SERVICE] Found conflicting confirmed booking:', conflictingBooking.id);
         return {
           success: false,
           message: 'Property is not available for the selected dates',

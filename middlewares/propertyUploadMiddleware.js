@@ -12,7 +12,19 @@ const storage = multer.memoryStorage();
 const fileFilter = (req, file, cb) => {
   // Allowed file types for property media
   const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-  const allowedVideoTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/wmv'];
+  const allowedVideoTypes = [
+    'video/mp4',           // MP4
+    'video/mpeg',          // MPEG
+    'video/quicktime',     // MOV (corrected from 'video/mov')
+    'video/x-msvideo',     // AVI
+    'video/x-ms-wmv',      // WMV
+    'video/webm',          // WebM
+    'video/ogg',           // OGG
+    'video/3gpp',          // 3GP
+    'video/3gpp2',         // 3G2
+    'video/x-flv',         // FLV
+    'video/x-matroska'     // MKV
+  ];
   const allowedDocumentTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
 
   const allowedTypes = [...allowedImageTypes, ...allowedVideoTypes, ...allowedDocumentTypes];
