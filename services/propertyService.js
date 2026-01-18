@@ -20,7 +20,7 @@ class PropertyService {
       console.log('🏗️ [PROPERTY SERVICE] Listing type:', propertyData.listingType);
       console.log('🏗️ [PROPERTY SERVICE] Has upload results:', !!uploadResults);
       console.log('🏗️ [PROPERTY SERVICE] Upload media count:', uploadResults?.media?.length || 0);
-      
+
       // Check if owner exists
       console.log('🔍 [PROPERTY SERVICE] Checking if owner exists...');
       const owner = await User.findByPk(ownerId);
@@ -103,6 +103,13 @@ class PropertyService {
         agentId: propertyData.agentId
       };
 
+      // Handle video URL if present
+      if (uploadResults && uploadResults.videos && uploadResults.videos.length > 0) {
+        console.log('🎥 [PROPERTY SERVICE] Video detected, adding videoUrl');
+        propertyDataToCreate.videoUrl = uploadResults.videos[0].secure_url;
+        console.log('🎥 [PROPERTY SERVICE] Video URL:', uploadResults.videos[0].secure_url);
+      }
+
       // Create the property
       console.log('🔄 [PROPERTY SERVICE] Creating property in database...');
       console.log('📝 [PROPERTY SERVICE] Property data to create:', {
@@ -114,7 +121,7 @@ class PropertyService {
         state: propertyDataToCreate.state,
         status: propertyDataToCreate.status || 'pending'
       });
-      
+
       const property = await Property.create(propertyDataToCreate);
       console.log('✅ [PROPERTY SERVICE] Property created in database:', {
         id: property.id,
@@ -176,7 +183,7 @@ class PropertyService {
       console.error('❌ [PROPERTY SERVICE] Error name:', error.name);
       console.error('❌ [PROPERTY SERVICE] Error message:', error.message);
       console.error('❌ [PROPERTY SERVICE] Error stack:', error.stack);
-      
+
       // Clean up uploaded files if property creation fails
       if (uploadResults && uploadResults.media) {
         console.log('🧹 [PROPERTY SERVICE] Cleaning up uploaded files...');
@@ -438,7 +445,7 @@ class PropertyService {
 
       // Convert Sequelize model to plain object to ensure all associations are properly serialized
       const propertyData = property.get({ plain: true });
-      
+
       // Always try to fetch owner if ownerId exists and owner is not loaded
       // This ensures owner is always included even if association fails
       if (!propertyData.owner && propertyData.ownerId) {
@@ -446,17 +453,17 @@ class PropertyService {
           propertyId,
           ownerId: propertyData.ownerId
         });
-        
+
         try {
           const ownerCheck = await User.findByPk(propertyData.ownerId, {
             paranoid: false,
             attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl', 'status', 'deletedAt']
           });
-          
+
           if (ownerCheck) {
             // Convert owner to plain object
             const ownerData = ownerCheck.get({ plain: true });
-            
+
             // If owner exists but is soft-deleted or inactive, still include it but log a warning
             if (ownerData.deletedAt) {
               console.warn('⚠️ [PROPERTY SERVICE] Property owner is soft-deleted:', {
@@ -465,10 +472,10 @@ class PropertyService {
                 deletedAt: ownerData.deletedAt
               });
             }
-            
+
             // Manually attach owner to propertyData
             propertyData.owner = ownerData;
-            
+
             console.log('✅ [PROPERTY SERVICE] Owner manually attached:', {
               id: ownerData.id,
               firstName: ownerData.firstName,
@@ -489,7 +496,7 @@ class PropertyService {
           });
         }
       }
-      
+
       console.log('🔍 [PROPERTY SERVICE] getPropertyById - Final property data:', {
         id: propertyData.id,
         title: propertyData.title,
@@ -542,18 +549,18 @@ class PropertyService {
           }
         ]
       });
-      
+
       // Check if owner exists but wasn't loaded (might be soft-deleted)
       if (!property) {
         throw new Error('Property not found');
       }
-      
+
       if (!property.owner && property.ownerId) {
         const ownerCheck = await User.findByPk(property.ownerId, {
           paranoid: false,
           attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl', 'status', 'deletedAt']
         });
-        
+
         if (ownerCheck) {
           if (ownerCheck.deletedAt) {
             console.warn('⚠️ [PROPERTY SERVICE] Property owner is soft-deleted:', {
@@ -592,7 +599,7 @@ class PropertyService {
   /**
    * Update a property
    */
-  async updateProperty(propertyId, ownerId, updateData) {
+  async updateProperty(propertyId, ownerId, updateData, uploadResults = null) {
     try {
       const property = await Property.findOne({
         where: {
@@ -613,11 +620,11 @@ class PropertyService {
       // Generate new slug if title is being updated
       if (updateData.title && updateData.title !== property.title) {
         const newSlug = this.generateSlug(updateData.title);
-        const existingProperty = await Property.findOne({ 
-          where: { 
+        const existingProperty = await Property.findOne({
+          where: {
             slug: newSlug,
             id: { [Op.ne]: propertyId }
-          } 
+          }
         });
         if (existingProperty) {
           throw new Error('A property with this title already exists');

@@ -293,7 +293,7 @@ class PaystackService {
     async handleWebhook(payload, callback) {
         try {
             const { event, data } = payload;
-            
+
             switch (event) {
                 case 'charge.success':
                     await this.handleSuccessfulPayment(data);
@@ -314,7 +314,7 @@ class PaystackService {
                 default:
                     console.log('Unhandled webhook event:', event);
             }
-            
+
             return callback(messageHandler("Webhook processed successfully", true, SUCCESS));
         } catch (error) {
             console.error("Webhook processing error:", error);
@@ -337,10 +337,68 @@ class PaystackService {
                 return;
             }
 
-            const booking = payment.bookingId ? await Booking.findByPk(payment.bookingId) : null;
+            console.log('✅ [Paystack Webhook] Processing successful payment:', reference);
+            console.log('✅ [Paystack Webhook] Payment metadata:', payment.metadata);
+
+            let booking = payment.bookingId ? await Booking.findByPk(payment.bookingId) : null;
             const amountMajor = data?.amount ? (Number(data.amount) / PAYSTACK_DECIMAL_FACTOR).toFixed(2) : payment.amount;
             const paymentMethod = this.mapChannelToPaymentMethod(data?.channel);
 
+            // Check if we need to create booking from metadata (Payment-First Flow)
+            if (!booking && payment.metadata?.createBookingOnSuccess && payment.metadata?.bookingData) {
+                console.log('🆕 [Paystack Webhook] Creating booking from payment metadata');
+
+                try {
+                    const bookingData = payment.metadata.bookingData;
+
+                    // Create the booking
+                    booking = await Booking.create({
+                        ...bookingData,
+                        status: 'confirmed', // Set to confirmed since payment is successful
+                        paymentStatus: 'completed',
+                        paymentMethod,
+                        transactionId: reference
+                    });
+
+                    console.log('✅ [Paystack Webhook] Booking created successfully:', booking.id);
+
+                    // Update payment record with bookingId
+                    await payment.update({
+                        bookingId: booking.id
+                    });
+
+                    // Block dates for the booking
+                    try {
+                        const { blockDatesForBooking } = await import('../../services/availabilityService.js');
+                        await blockDatesForBooking(booking);
+                        console.log('✅ [Paystack Webhook] Dates blocked for booking:', booking.id);
+                    } catch (blockError) {
+                        console.error('❌ [Paystack Webhook] Error blocking dates:', blockError);
+                        // Don't fail the payment processing if date blocking fails
+                    }
+                } catch (bookingError) {
+                    console.error('❌ [Paystack Webhook] Error creating booking from metadata:', bookingError);
+                    // Update payment but mark as needing manual review
+                    await payment.update({
+                        status: 'completed',
+                        amount: amountMajor,
+                        currency: data?.currency || payment.currency,
+                        paymentMethod,
+                        transactionId: data?.id?.toString() || reference,
+                        gateway: 'paystack',
+                        gatewayResponse: data,
+                        failureReason: `Booking creation failed: ${bookingError.message}`,
+                        metadata: {
+                            ...payment.metadata,
+                            bookingCreationError: bookingError.message,
+                            requiresManualReview: true
+                        }
+                    });
+                    return; // Exit early since booking creation failed
+                }
+            }
+
+            // Update payment record
             await payment.update({
                 status: 'completed',
                 amount: amountMajor,
@@ -354,6 +412,7 @@ class PaystackService {
             });
 
             if (booking) {
+                // Update booking if it already exists (old flow) or was just created (new flow)
                 await booking.update({
                     paymentStatus: 'completed',
                     paymentMethod,
@@ -365,13 +424,13 @@ class PaystackService {
                 try {
                     const { sendBookingReceipt } = await import('../../services/bookingService.js');
                     const { User } = await import('../../schema/index.js');
-                    
+
                     const user = await User.findByPk(booking.userId);
                     if (user) {
                         // Fetch booking with relations
                         const Booking = (await import('../../schema/Booking.js')).default;
                         const Property = (await import('../../schema/Property.js')).default;
-                        
+
                         const bookingWithRelations = await Booking.findByPk(booking.id, {
                             include: [
                                 {
@@ -394,9 +453,10 @@ class PaystackService {
                         });
 
                         await sendBookingReceipt(bookingWithRelations, user, payment);
+                        console.log('✅ [Paystack Webhook] Booking receipt sent');
                     }
                 } catch (receiptError) {
-                    console.error('Error sending booking receipt after payment:', receiptError);
+                    console.error('❌ [Paystack Webhook] Error sending booking receipt:', receiptError);
                     // Don't fail the payment processing if receipt email fails
                 }
             }
@@ -405,14 +465,17 @@ class PaystackService {
             if (payment.paymentType === 'subscription' && payment.propertyId) {
                 const { Subscription } = await import('../../schema/index.js');
                 const subscriptionService = (await import('../../services/subscriptionService.js')).default;
-                
+
                 const subscription = await Subscription.findByPk(payment.propertyId);
                 if (subscription && subscription.status !== 'active') {
                     await subscriptionService.activateSubscription(subscription.id);
                 }
             }
+
+            console.log('✅ [Paystack Webhook] Payment processing completed successfully');
         } catch (error) {
-            console.error('Error handling successful payment:', error);
+            console.error('❌ [Paystack Webhook] Error handling successful payment:', error);
+            console.error('❌ [Paystack Webhook] Error stack:', error.stack);
         }
 
     }

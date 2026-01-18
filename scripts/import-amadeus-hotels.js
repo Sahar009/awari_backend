@@ -17,18 +17,23 @@ async function importHotels() {
         await sequelize.authenticate();
         console.log('✅ Database connection established');
 
-        // 1. Get an owner for these properties
-        const owner = await User.findOne({ where: { email: 'devuser@mail.com' } }) ||
-            await User.findOne({ where: { role: 'admin' } });
+        // 1. Get Amadeus system user as owner for these properties
+        const owner = await User.findOne({ where: { email: 'amadeus@system.awarihome.com' } });
 
         if (!owner) {
-            console.error('❌ No suitable owner found in database. Please run scripts/createDemoUser.js first.');
+            console.error('❌ Amadeus system user not found.');
+            console.error('   Please run: node scripts/create-amadeus-user.js');
             process.exit(1);
         }
-        console.log(`👤 Using owner: ${owner.email} (${owner.id})`);
+        console.log(`👤 Using Amadeus system user: ${owner.email} (${owner.id})`);
 
         // 2. Fetch real hotels from Amadeus (Lagos - LOS)
-        console.log('🌐 Fetching hotels from Amadeus (City: LOS)...');
+        console.log('\n========================================');
+        console.log('🌐 FETCHING HOTELS FROM AMADEUS');
+        console.log('========================================');
+        console.log('City Code: LOS (Lagos)');
+        console.log('Timestamp:', new Date().toISOString());
+
         const amadeusResult = await amadeusService.searchHotels('LOS');
 
         if (!amadeusResult.success) {
@@ -37,7 +42,22 @@ async function importHotels() {
         }
 
         const hotels = amadeusResult.data;
-        console.log(`🏨 Found ${hotels.length} hotels on Amadeus.`);
+        console.log('\n✅ AMADEUS SEARCH SUCCESSFUL');
+        console.log('========================================');
+        console.log(`🏨 Total Hotels Found: ${hotels.length}`);
+
+        console.log('\n📋 HOTEL DATA STRUCTURE (First 5):');
+        hotels.slice(0, 5).forEach((hotel, index) => {
+            console.log(`\n--- Hotel ${index + 1} ---`);
+            console.log('External ID:', hotel.externalId);
+            console.log('Title:', hotel.title);
+            console.log('Source:', hotel.source);
+            if (hotel.rawData) {
+                console.log('Raw Data Keys:', Object.keys(hotel.rawData));
+                console.log('Full Raw Data:', JSON.stringify(hotel.rawData, null, 2));
+            }
+        });
+        console.log('========================================\n');
 
         // 3. Clean up existing Amadeus properties and their media
         console.log('🧹 Aggressive cleanup of existing Amadeus properties...');

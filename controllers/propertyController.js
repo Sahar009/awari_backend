@@ -17,7 +17,7 @@ class PropertyController {
       console.log('🏠 [PROPERTY CONTROLLER] Content-Length:', req.headers['content-length']);
       console.log('🏠 [PROPERTY CONTROLLER] Has files:', !!req.files);
       console.log('🏠 [PROPERTY CONTROLLER] Files count:', req.files?.length || 0);
-      
+
       // Check for validation errors
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -93,7 +93,7 @@ class PropertyController {
       console.error('❌ [PROPERTY CONTROLLER] Error message:', error.message);
       console.error('❌ [PROPERTY CONTROLLER] Error stack:', error.stack);
       console.error('❌ [PROPERTY CONTROLLER] Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
-      
+
       // Handle foreign key constraint errors specifically
       if (error.message && error.message.includes('foreign key constraint fails')) {
         console.error('❌ [PROPERTY CONTROLLER] Foreign key constraint error detected');
@@ -130,10 +130,10 @@ class PropertyController {
         success: true,
         message: 'User authentication check',
         data: {
-          requestUser: { 
-            id: req.user.id, 
-            email: req.user.email, 
-            role: req.user.role 
+          requestUser: {
+            id: req.user.id,
+            email: req.user.email,
+            role: req.user.role
           },
           userExistsInDB: !!dbUser,
           dbUserStatus: dbUser?.status || 'not found'
@@ -270,8 +270,9 @@ class PropertyController {
       const { propertyId } = req.params;
       const ownerId = req.user.id;
       const updateData = req.body;
+      const uploadResults = req.uploadResults || null;
 
-      const result = await propertyService.updateProperty(propertyId, ownerId, updateData);
+      const result = await propertyService.updateProperty(propertyId, ownerId, updateData, uploadResults);
 
       res.status(200).json(result);
     } catch (error) {

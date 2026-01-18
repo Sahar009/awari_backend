@@ -1,6 +1,7 @@
 import { validationResult } from 'express-validator';
 import {
   initializeBookingPayment,
+  initializeBookingPaymentWithData,
   verifyPayment,
   handlePaystackWebhook,
   initiatePayout,
@@ -25,6 +26,19 @@ export const initializeBookingPaymentController = async (req, res) => {
   if (validationError) return;
 
   const result = await initializeBookingPayment(req.user, req.params.bookingId, req.body);
+
+  return res.status(result.statusCode || (result.success ? 200 : 500)).json({
+    success: result.success,
+    message: result.message,
+    data: result.data
+  });
+};
+
+export const initializeBookingPaymentWithDataController = async (req, res) => {
+  const validationError = handleValidationErrors(req, res);
+  if (validationError) return;
+
+  const result = await initializeBookingPaymentWithData(req.user, req.body);
 
   return res.status(result.statusCode || (result.success ? 200 : 500)).json({
     success: result.success,
@@ -95,6 +109,7 @@ export const verifyBankAccountController = async (req, res) => {
 
 export default {
   initializeBookingPayment: initializeBookingPaymentController,
+  initializeBookingPaymentWithData: initializeBookingPaymentWithDataController,
   verifyPayment: verifyPaymentController,
   handlePaystackWebhook: handlePaystackWebhookController,
   initiatePayout: initiatePayoutController,

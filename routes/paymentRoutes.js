@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   initializeBookingPaymentController,
+  initializeBookingPaymentWithDataController,
   verifyPaymentController,
   handlePaystackWebhookController,
   initiatePayoutController,
@@ -22,6 +23,14 @@ router.post(
   authenticateToken,
   initializePaymentValidation,
   initializeBookingPaymentController
+);
+
+// New payment-first flow: Initialize payment with booking data (no pre-created booking)
+router.post(
+  '/initialize-booking',
+  authenticateToken,
+  initializePaymentValidation,
+  initializeBookingPaymentWithDataController
 );
 
 router.post(

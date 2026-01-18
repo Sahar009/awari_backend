@@ -38,6 +38,9 @@ const extractRecipientCode = (data) => {
 
 export const initializeBookingPayment = async (currentUser, bookingId, payload = {}) => {
   try {
+    console.log('💳 [Payment Service] Initializing payment for booking:', bookingId);
+    console.log('💳 [Payment Service] Current user:', { id: currentUser?.id, role: currentUser?.role });
+
     const booking = await Booking.findByPk(bookingId, {
       include: [
         {
@@ -54,10 +57,33 @@ export const initializeBookingPayment = async (currentUser, bookingId, payload =
     });
 
     if (!booking) {
+      console.error('❌ [Payment Service] Booking not found:', bookingId);
       return messageHandler('Booking not found', false, NOT_FOUND);
     }
 
+    console.log('✅ [Payment Service] Booking found:', {
+      id: booking.id,
+      userId: booking.userId,
+      propertyId: booking.propertyId,
+      totalPrice: booking.totalPrice,
+      paymentStatus: booking.paymentStatus
+    });
+
+    // Validate userId exists
+    if (!booking.userId) {
+      console.error('❌ [Payment Service] Booking has no userId:', {
+        bookingId: booking.id,
+        bookingData: booking.toJSON()
+      });
+      return messageHandler('Booking is missing user information. Please contact support.', false, BAD_REQUEST);
+    }
+
     if (currentUser.role !== 'admin' && booking.userId !== currentUser.id) {
+      console.error('❌ [Payment Service] Authorization failed:', {
+        bookingUserId: booking.userId,
+        currentUserId: currentUser.id,
+        userRole: currentUser.role
+      });
       return messageHandler('You are not authorized to pay for this booking', false, FORBIDDEN);
     }
 
@@ -79,9 +105,14 @@ export const initializeBookingPayment = async (currentUser, bookingId, payload =
 
     const reference = payload.reference || generateReference();
 
+    // Use booking.userId (validated above) or fallback to currentUser.id as last resort
+    const paymentUserId = booking.userId || currentUser.id;
+
+    console.log('💳 [Payment Service] Using userId for payment:', paymentUserId);
+
     const metadata = {
       bookingId,
-      userId: booking.userId,
+      userId: paymentUserId,
       ownerId: booking.ownerId,
       propertyId: booking.propertyId,
       bookingType: booking.bookingType,
@@ -106,13 +137,16 @@ export const initializeBookingPayment = async (currentUser, bookingId, payload =
     );
 
     if (!paystackResult.success) {
+      console.error('❌ [Payment Service] Paystack initialization failed:', paystackResult);
       return paystackResult;
     }
 
     const transactionData = paystackResult.data;
 
+    console.log('💳 [Payment Service] Creating payment record with userId:', paymentUserId);
+
     await Payment.upsert({
-      userId: booking.userId,
+      userId: paymentUserId, // Use validated userId
       bookingId: booking.id,
       propertyId: booking.propertyId,
       amount,
@@ -128,6 +162,8 @@ export const initializeBookingPayment = async (currentUser, bookingId, payload =
       description: payload.description || `Payment for booking ${booking.id}`
     });
 
+    console.log('✅ [Payment Service] Payment record created successfully');
+
     await booking.update({ paymentStatus: 'pending', paymentMethod: 'paystack' });
 
     return messageHandler('Payment initialized successfully', true, SUCCESS, {
@@ -136,7 +172,201 @@ export const initializeBookingPayment = async (currentUser, bookingId, payload =
       reference: transactionData.reference
     });
   } catch (error) {
-    console.error('Initialize payment error:', error);
+    console.error('❌ [Payment Service] Initialize payment error:', error);
+    console.error('❌ [Payment Service] Error stack:', error.stack);
+    return messageHandler('Failed to initialize payment', false, INTERNAL_SERVER_ERROR, {
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Initialize booking payment with booking data (Payment-First Flow)
+ * Creates booking only after successful payment via webhook
+ * @param {Object} currentUser - Current user object
+ * @param {Object} bookingData - Complete booking data
+ * @returns {Object} Payment initialization result
+ */
+export const initializeBookingPaymentWithData = async (currentUser, bookingData) => {
+  try {
+    console.log('💳 [Payment Service] Initializing payment-first booking flow');
+    console.log('💳 [Payment Service] Current user:', { id: currentUser?.id, role: currentUser?.role });
+    console.log('💳 [Payment Service] Booking data:', bookingData);
+
+    const {
+      propertyId,
+      checkInDate,
+      checkOutDate,
+      numberOfGuests,
+      basePrice,
+      totalPrice,
+      currency = 'NGN',
+      serviceFee = 0,
+      taxAmount = 0,
+      discountAmount = 0,
+      guestName,
+      guestEmail,
+      guestPhone,
+      specialRequests,
+      couponCode,
+      bookingType = 'shortlet',
+      numberOfNights,
+      amount,
+      email,
+      callbackUrl
+    } = bookingData;
+
+    // Validate required fields
+    if (!propertyId) {
+      return messageHandler('Property ID is required', false, BAD_REQUEST);
+    }
+
+    if (!totalPrice && !amount) {
+      return messageHandler('Total price or amount is required', false, BAD_REQUEST);
+    }
+
+    // Fetch property to validate and get owner info
+    console.log('🔍 [Payment Service] Fetching property:', propertyId);
+    const property = await Property.findByPk(propertyId, {
+      include: [
+        {
+          model: User,
+          as: 'owner',
+          attributes: ['id', 'email', 'firstName', 'lastName']
+        }
+      ]
+    });
+
+    if (!property) {
+      console.error('❌ [Payment Service] Property not found:', propertyId);
+      return messageHandler('Property not found', false, NOT_FOUND);
+    }
+
+    console.log('✅ [Payment Service] Property found:', {
+      id: property.id,
+      title: property.title,
+      ownerId: property.ownerId
+    });
+
+    // Check availability if dates provided
+    if (checkInDate && checkOutDate) {
+      console.log('🔍 [Payment Service] Checking availability');
+      const { checkDateRangeAvailability } = await import('./availabilityService.js');
+      const availabilityCheck = await checkDateRangeAvailability(propertyId, checkInDate, checkOutDate);
+
+      if (!availabilityCheck.available) {
+        console.error('❌ [Payment Service] Property not available for selected dates');
+        return messageHandler('Property is not available for the selected dates', false, CONFLICT, {
+          conflictingDates: availabilityCheck.conflictingDates
+        });
+      }
+      console.log('✅ [Payment Service] Property is available');
+    }
+
+    // Determine payment amount
+    const paymentAmount = normalizeAmount(amount || totalPrice);
+    const paymentCurrency = currency || 'NGN';
+
+    // Determine customer email
+    const customerEmail = email || guestEmail || currentUser.email;
+    if (!customerEmail) {
+      return messageHandler('Customer email is required to initialize payment', false, BAD_REQUEST);
+    }
+
+    // Generate reference
+    const reference = generateReference('BOOK');
+
+    // Prepare complete booking data for metadata
+    const completeBookingData = {
+      propertyId,
+      userId: currentUser.id,
+      ownerId: property.ownerId,
+      bookingType: bookingType || 'shortlet',
+      checkInDate: checkInDate || null,
+      checkOutDate: checkOutDate || null,
+      numberOfNights: numberOfNights || null,
+      numberOfGuests: numberOfGuests || 1,
+      basePrice: Number(basePrice || totalPrice),
+      totalPrice: Number(totalPrice),
+      currency: paymentCurrency,
+      serviceFee: serviceFee ? Number(serviceFee) : 0,
+      taxAmount: taxAmount ? Number(taxAmount) : 0,
+      discountAmount: discountAmount ? Number(discountAmount) : 0,
+      guestName: guestName || `${currentUser.firstName} ${currentUser.lastName}`,
+      guestPhone: guestPhone || currentUser.phone || null,
+      guestEmail: customerEmail,
+      specialRequests: specialRequests || null,
+      couponCode: couponCode || null,
+      status: 'pending',
+      paymentStatus: 'pending'
+    };
+
+    // Store booking data in payment metadata
+    const metadata = {
+      paymentType: 'booking',
+      bookingData: completeBookingData,
+      propertyId,
+      propertyTitle: property.title,
+      userId: currentUser.id,
+      ownerId: property.ownerId,
+      initiatedBy: currentUser.id,
+      source: 'awari-mobile',
+      createBookingOnSuccess: true // Flag to create booking in webhook
+    };
+
+    console.log('💳 [Payment Service] Initializing Paystack transaction');
+
+    // Initialize Paystack transaction
+    const paystackResult = await paystackService.initializeTransaction(
+      {
+        email: customerEmail,
+        amount: paymentAmount,
+        currency: paymentCurrency,
+        callbackUrl,
+        reference,
+        metadata,
+        channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer']
+      },
+      (response) => response
+    );
+
+    if (!paystackResult.success) {
+      console.error('❌ [Payment Service] Paystack initialization failed:', paystackResult);
+      return paystackResult;
+    }
+
+    const transactionData = paystackResult.data;
+
+    console.log('💳 [Payment Service] Creating payment record (without bookingId)');
+
+    // Create payment record without bookingId (will be updated after booking creation)
+    await Payment.create({
+      userId: currentUser.id,
+      bookingId: null, // Will be set after booking creation in webhook
+      propertyId: property.id,
+      amount: paymentAmount,
+      currency: paymentCurrency,
+      status: 'pending',
+      paymentMethod: 'paystack',
+      paymentType: 'booking',
+      gateway: 'paystack',
+      reference: transactionData.reference,
+      transactionId: transactionData.access_code,
+      gatewayResponse: transactionData,
+      metadata,
+      description: `Booking payment for ${property.title}`
+    });
+
+    console.log('✅ [Payment Service] Payment record created successfully');
+
+    return messageHandler('Payment initialized successfully', true, SUCCESS, {
+      authorizationUrl: transactionData.authorization_url,
+      accessCode: transactionData.access_code,
+      reference: transactionData.reference
+    });
+  } catch (error) {
+    console.error('❌ [Payment Service] Initialize payment with data error:', error);
+    console.error('❌ [Payment Service] Error stack:', error.stack);
     return messageHandler('Failed to initialize payment', false, INTERNAL_SERVER_ERROR, {
       error: error.message
     });
@@ -144,6 +374,7 @@ export const initializeBookingPayment = async (currentUser, bookingId, payload =
 };
 
 export const verifyPayment = async (reference) => {
+
   try {
     const verification = await paystackService.verifyTransaction(reference, (response) => response);
 
@@ -370,7 +601,7 @@ export const verifyBankAccount = async (payload) => {
 export const initializeSubscriptionPayment = async (currentUser, subscriptionId, payload = {}) => {
   try {
     const { Subscription } = await import('../schema/index.js');
-    
+
     const subscription = await Subscription.findByPk(subscriptionId, {
       include: [
         {
