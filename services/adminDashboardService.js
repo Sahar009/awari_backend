@@ -1407,6 +1407,26 @@ export const updatePropertyStatus = async (adminId, propertyId, payload = {}) =>
       };
     }
 
+    // Validate admin user exists if we're going to set approvedBy
+    if (status === 'active') {
+      if (!adminId) {
+        return {
+          success: false,
+          message: 'Admin ID is required to approve a property',
+          statusCode: 400
+        };
+      }
+
+      const adminUser = await User.findByPk(adminId);
+      if (!adminUser) {
+        return {
+          success: false,
+          message: `Admin user with ID ${adminId} not found. Cannot approve property.`,
+          statusCode: 404
+        };
+      }
+    }
+
     const property = await Property.findByPk(propertyId, {
       include: [
         {
@@ -1484,6 +1504,7 @@ export const updatePropertyStatus = async (adminId, propertyId, payload = {}) =>
       updateData.approvedBy = adminId;
       updateData.approvedAt = new Date();
       updateData.rejectionReason = null;
+      console.log('Setting approvedBy to:', adminId, 'Type:', typeof adminId);
     } else if (status === 'rejected') {
       updateData.rejectionReason = rejectionReason || 'No reason provided';
       updateData.approvedAt = null;
@@ -1500,6 +1521,7 @@ export const updatePropertyStatus = async (adminId, propertyId, payload = {}) =>
       updateData.rejectionReason = null;
     }
 
+    console.log('Property update data:', JSON.stringify(updateData, null, 2));
     await property.update(updateData);
 
     const updatedProperty = await Property.findByPk(propertyId, {

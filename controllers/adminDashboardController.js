@@ -56,8 +56,21 @@ export const getPropertyDetails = async (req, res) => {
 };
 
 export const updatePropertyStatus = async (req, res) => {
+  console.log('🔧 updatePropertyStatus called');
+  console.log('📋 Request user:', {
+    id: req.user?.id,
+    email: req.user?.email,
+    role: req.user?.role,
+    userObjectKeys: req.user ? Object.keys(req.user.dataValues || req.user) : 'no user'
+  });
+  console.log('📦 Request body:', req.body);
+
   const adminId = req.user.id;
   const { propertyId } = req.params;
+
+  console.log('🆔 Extracted adminId:', adminId, 'Type:', typeof adminId);
+  console.log('🏠 Property ID:', propertyId);
+
   const result = await adminDashboardService.updatePropertyStatus(adminId, propertyId, req.body);
   return respond(res, result);
 };

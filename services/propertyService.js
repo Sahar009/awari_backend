@@ -856,11 +856,17 @@ class PropertyService {
 
       const updateData = {
         status: moderationData.status,
-        approvedBy: moderationData.status === 'active' ? moderatorId : null,
-        approvedAt: moderationData.status === 'active' ? new Date() : null,
-        rejectionReason: moderationData.status === 'rejected' ? moderationData.rejectionReason : null,
         moderationNotes: moderationData.moderationNotes
       };
+
+      // Only set approvedBy when approving
+      if (moderationData.status === 'active') {
+        updateData.approvedBy = moderatorId;
+        updateData.approvedAt = new Date();
+      } else if (moderationData.status === 'rejected') {
+        updateData.rejectionReason = moderationData.rejectionReason;
+        updateData.approvedAt = null;
+      }
 
       await property.update(updateData);
 
