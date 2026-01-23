@@ -1486,23 +1486,18 @@ export const updatePropertyStatus = async (adminId, propertyId, payload = {}) =>
       updateData.rejectionReason = null;
     } else if (status === 'rejected') {
       updateData.rejectionReason = rejectionReason || 'No reason provided';
-      updateData.approvedBy = null;
       updateData.approvedAt = null;
     } else if (['inactive', 'archived'].includes(status)) {
       updateData.rejectionReason = rejectionReason ?? null;
       if (status === 'archived') {
-        updateData.approvedBy = null;
         updateData.approvedAt = null;
       }
-    } else {
-      updateData.rejectionReason = null;
-    }
-
-    if (status === 'pending') {
-      updateData.approvedBy = null;
+    } else if (status === 'pending') {
       updateData.approvedAt = null;
       updateData.rejectionReason = null;
       updateData.moderationNotes = moderationNotes ?? 'Returned to pending for review';
+    } else {
+      updateData.rejectionReason = null;
     }
 
     await property.update(updateData);
@@ -2355,10 +2350,10 @@ export const getLoginSnapshot = async () => {
       urgentNotifications
     ] = await Promise.all([
       // New listings pending review
-      Property.count({ 
-        where: { status: 'pending' } 
+      Property.count({
+        where: { status: 'pending' }
       }),
-      
+
       // Active hosts online (landlords/agents who logged in within last 24 hours)
       User.count({
         where: {
@@ -2367,7 +2362,7 @@ export const getLoginSnapshot = async () => {
           lastLogin: { [Op.gte]: twentyFourHoursAgo }
         }
       }),
-      
+
       // Urgent support tickets/notifications
       Notification.count({
         where: {
