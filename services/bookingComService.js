@@ -4,6 +4,10 @@
  * Note: This is an initial implementation with mock responses.
  * To use real data, replace the mock logic with actual API calls to Booking.com Connectivity API.
  */
+import { sendTemplateNotification } from './notificationService.js';
+import Booking from '../schema/Booking.js';
+import User from '../schema/User.js';
+import Property from '../schema/Property.js';
 class BookingComService {
     constructor() {
         this.apiKey = process.env.BOOKING_COM_API_KEY;
@@ -66,6 +70,54 @@ class BookingComService {
 
         // Mock successful booking
         const mockExternalId = `BK-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+
+        // Send notifications to both user and owner
+        try {
+            console.log('📧 [BOOKING.COM SERVICE] Attempting to send notifications...');
+
+            // Fetch complete booking data with relations for notifications
+            // Note: In real implementation, you would use the localBookingId from bookingData
+            if (bookingData.localBookingId) {
+                const completeBooking = await Booking.findByPk(bookingData.localBookingId, {
+                    include: [
+                        {
+                            model: Property,
+                            as: 'property',
+                            include: [{
+                                model: User,
+                                as: 'owner',
+                                attributes: ['id', 'firstName', 'lastName', 'email']
+                            }]
+                        },
+                        {
+                            model: User,
+                            as: 'user',
+                            attributes: ['id', 'firstName', 'lastName', 'email']
+                        }
+                    ]
+                });
+
+                if (completeBooking && completeBooking.user && completeBooking.property?.owner) {
+                    // Send notifications
+                    await sendTemplateNotification('BOOKING_CREATED_GUEST', completeBooking.user, {
+                        booking: completeBooking,
+                        property: completeBooking.property
+                    });
+                    console.log('✅ [BOOKING.COM SERVICE] Guest notification sent');
+
+                    await sendTemplateNotification('BOOKING_CREATED_OWNER', completeBooking.property.owner, {
+                        booking: completeBooking,
+                        property: completeBooking.property,
+                        user: completeBooking.user
+                    });
+                    console.log('✅ [BOOKING.COM SERVICE] Owner notification sent');
+                } else {
+                    console.warn('⚠️ [BOOKING.COM SERVICE] Could not find complete booking data for notifications');
+                }
+            }
+        } catch (notificationError) {
+            console.error('⚠️ [BOOKING.COM SERVICE] Failed to send notifications:', notificationError);
+        }
 
         return {
             success: true,

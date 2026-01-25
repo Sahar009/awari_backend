@@ -218,7 +218,7 @@ export const createAndSendNotification = async (notificationData) => {
   try {
     const notification = await createNotification(notificationData);
     const deliveryResults = await sendNotification(notification.id);
-    
+
     return {
       notification,
       deliveryResults
@@ -440,7 +440,7 @@ export const getNotificationStats = async (userId) => {
     });
 
     const total = await Notification.count({ where: { userId } });
-    const unread = await Notification.count({ 
+    const unread = await Notification.count({
       where: { userId, isRead: false, status: { [Op.ne]: 'archived' } }
     });
 
@@ -517,7 +517,7 @@ export const sendNotificationByTopic = async (topic, notificationData) => {
         });
         userIds = owners.map(owner => owner.id);
         break;
-      
+
       case 'guests':
         const guests = await User.findAll({
           where: { role: 'guest' },
@@ -525,14 +525,14 @@ export const sendNotificationByTopic = async (topic, notificationData) => {
         });
         userIds = guests.map(guest => guest.id);
         break;
-      
+
       case 'all_users':
         const allUsers = await User.findAll({
           attributes: ['id']
         });
         userIds = allUsers.map(user => user.id);
         break;
-      
+
       default:
         throw new Error('Invalid topic');
     }
@@ -561,7 +561,9 @@ const getEmailTemplate = (type) => {
     [NotificationTypes.PROPERTY_REJECTED]: 'property-rejected',
     [NotificationTypes.PAYMENT_SUCCESS]: 'payment-success',
     [NotificationTypes.PAYMENT_FAILED]: 'payment-failed',
-    'BOOKING_RECEIPT': 'booking-receipt'
+    'BOOKING_RECEIPT': 'booking-receipt',
+    'BOOKING_CREATED_GUEST': 'booking-created-guest',
+    'BOOKING_CREATED_OWNER': 'booking-created-owner'
   };
 
   return templateMap[type] || 'default';
@@ -628,6 +630,28 @@ export const NotificationTemplates = {
     actionText: 'View Details'
   }),
 
+  BOOKING_CREATED_GUEST: (user, booking) => ({
+    title: 'Booking Created Successfully!',
+    message: `Hi ${user.firstName}, your booking for ${booking.property?.title || 'the property'} has been created and is pending confirmation. Check-in: ${booking.checkInDate}`,
+    type: 'success',
+    category: 'booking',
+    priority: 'high',
+    channels: ['email', 'push', 'in_app'],
+    actionUrl: `/bookings/${booking.id}`,
+    actionText: 'View Booking'
+  }),
+
+  BOOKING_CREATED_OWNER: (user, booking) => ({
+    title: 'New Booking Received!',
+    message: `Hi ${user.firstName}, you have a new booking for your property "${booking.property?.title}". Guest: ${booking.user?.firstName} ${booking.user?.lastName}. Check-in: ${booking.checkInDate}`,
+    type: 'info',
+    category: 'booking',
+    priority: 'high',
+    channels: ['email', 'push', 'in_app'],
+    actionUrl: `/bookings/${booking.id}`,
+    actionText: 'View Booking'
+  }),
+
   // Property related
   PROPERTY_APPROVED: (user, property) => ({
     title: 'Property Approved!',
@@ -690,7 +714,7 @@ export const sendTemplateNotification = async (templateName, user, additionalDat
     }
 
     const templateData = template(user, additionalData);
-    
+
     return await createAndSendNotification({
       userId: user.id,
       ...templateData,

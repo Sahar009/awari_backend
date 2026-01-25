@@ -467,6 +467,35 @@ export const createBooking = async (userId, bookingData) => {
 
       console.log('✅ [BOOKING SERVICE] Complete booking data:', JSON.stringify(completeBooking?.toJSON(), null, 2));
 
+      // Send notifications to both user and owner
+      try {
+        console.log('📧 [BOOKING SERVICE] Sending notifications...');
+
+        // Notify the guest
+        await sendTemplateNotification('BOOKING_CREATED_GUEST', completeBooking.user, {
+          booking: completeBooking,
+          property: completeBooking.property
+        });
+        console.log('✅ [BOOKING SERVICE] Guest notification sent');
+
+        // Notify the property owner
+        await sendTemplateNotification('BOOKING_CREATED_OWNER', completeBooking.property.owner, {
+          booking: completeBooking,
+          property: completeBooking.property,
+          user: completeBooking.user
+        });
+        console.log('✅ [BOOKING SERVICE] Owner notification sent');
+
+        console.log('✅ [BOOKING SERVICE] All notifications sent successfully');
+      } catch (notificationError) {
+        // Log error but don't fail the booking
+        console.error('⚠️ [BOOKING SERVICE] Failed to send notifications:', notificationError);
+        console.error('⚠️ [BOOKING SERVICE] Notification error details:', {
+          message: notificationError.message,
+          stack: notificationError.stack
+        });
+      }
+
       return {
         success: true,
         message: 'Booking created successfully',
