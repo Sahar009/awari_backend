@@ -18,6 +18,7 @@ import adminDashboardRoutes from './adminDashboardRoutes.js';
 import walletRoutes from './walletRoutes.js';
 import paystackWebhookRoutes from './paystackWebhookRoutes.js';
 import adminWithdrawalRoutes from './adminWithdrawalRoutes.js';
+import bookingFeeConfigRoutes from './bookingFeeConfigRoutes.js';
 import { sendEmail } from '../modules/notifications/email.js';
 
 const router = (app) => {
@@ -41,21 +42,22 @@ const router = (app) => {
   app.use('/api/landlord/dashboard', landlordDashboardRoutes);
   app.use('/api/hotel/dashboard', hotelDashboardRoutes);
   app.use('/api/admin/dashboard', adminDashboardRoutes);
+  app.use('/api/booking-fees', bookingFeeConfigRoutes);
 
   // Test email route
   app.get(`/api/test-email`, async (req, res) => {
     try {
-        const result = await sendEmail({
-            to: "sehindeshoes@gmail.com",
-            subject: 'Test Email from Awari',
-            template: 'test', 
-            context: { name: 'Test User' }
-        });
-        res.json({ success: true, result });
+      const result = await sendEmail({
+        to: "sehindeshoes@gmail.com",
+        subject: 'Test Email from Awari',
+        template: 'test',
+        context: { name: 'Test User' }
+      });
+      res.json({ success: true, result });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+      res.status(500).json({ success: false, error: error.message });
     }
-});
+  });
 
   app.get('/api/health', (req, res) => {
     res.status(200).json({

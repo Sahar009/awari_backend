@@ -10,6 +10,7 @@ import {
   CONFLICT,
   INTERNAL_SERVER_ERROR
 } from '../constants/statusCode.js';
+import { calculateBookingFees } from '../controllers/bookingFeeConfigController.js';
 
 const PAYSTACK_ALLOWED_PAYOUT_ROLES = ['landlord', 'agent', 'hotel_provider', 'admin'];
 
@@ -201,8 +202,6 @@ export const initializeBookingPaymentWithData = async (currentUser, bookingData)
       basePrice,
       totalPrice,
       currency = 'NGN',
-      serviceFee = 0,
-      taxAmount = 0,
       discountAmount = 0,
       guestName,
       guestEmail,
@@ -215,6 +214,14 @@ export const initializeBookingPaymentWithData = async (currentUser, bookingData)
       email,
       callbackUrl
     } = bookingData;
+
+    // Calculate fees dynamically from database
+    console.log('💰 [Payment Service] Calculating fees for basePrice:', basePrice);
+    const calculatedFees = await calculateBookingFees(basePrice || totalPrice || amount);
+    console.log('💰 [Payment Service] Calculated fees:', calculatedFees);
+
+    const serviceFee = calculatedFees.serviceFee;
+    const taxAmount = calculatedFees.taxAmount;
 
     // Validate required fields
     if (!propertyId) {

@@ -14,6 +14,7 @@ import NewsletterSubscription from './NewsletterSubscription.js';
 import Favorite from './Favorite.js';
 import Wallet from './Wallet.js';
 import WalletTransaction from './WalletTransaction.js';
+import BookingFeeConfig from './BookingFeeConfig.js';
 
 // Define associations
 const defineAssociations = () => {
@@ -135,7 +136,8 @@ export {
   NewsletterSubscription,
   Favorite,
   Wallet,
-  WalletTransaction
+  WalletTransaction,
+  BookingFeeConfig
 };
 
 export default {
@@ -154,5 +156,6 @@ export default {
   NewsletterSubscription,
   Favorite,
   Wallet,
-  WalletTransaction
+  WalletTransaction,
+  BookingFeeConfig
 };
