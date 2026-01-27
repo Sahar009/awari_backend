@@ -47,7 +47,7 @@ export const initializePaymentWithDataValidation = [
     .isLength({ min: 3, max: 3 })
     .withMessage('Currency must be a 3-letter code'),
   body('callbackUrl')
-    .isURL()
+    .isURL({ require_protocol: true, accept_localhost: true })
     .withMessage('Callback URL must be valid'),
   body('bookingType')
     .optional()
