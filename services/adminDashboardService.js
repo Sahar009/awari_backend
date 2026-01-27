@@ -231,7 +231,7 @@ export const createAdminUser = async (creatorId, payload = {}) => {
     delete plainUser.passwordResetToken;
     delete plainUser.passwordResetExpires;
 
-    const adminPortalUrl = process.env.ADMIN_APP_URL || 'https://admin.awari.com';
+    const adminPortalUrl = process.env.ADMIN_APP_URL || 'https://admin.awarihomes.com';
     const subject = 'Your AWARI admin access';
     const emailText = [
       `Hi ${firstName},`,

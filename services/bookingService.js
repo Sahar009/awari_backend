@@ -1579,7 +1579,7 @@ export const sendBookingReceipt = async (booking, user, payment = null) => {
       user: user,
       property: bookingWithRelations.property,
       payment: paymentData,
-      actionUrl: `${process.env.FRONTEND_URL || 'https://awari.com'}/bookings/${booking.id}`
+      actionUrl: `${process.env.FRONTEND_URL || 'https://awarihomes.com'}/bookings/${booking.id}`
     };
 
     const subject = `Booking Receipt - ${bookingWithRelations.property?.title || 'Your Booking'}`;
