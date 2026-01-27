@@ -350,10 +350,23 @@ class PaystackService {
 
                 try {
                     const bookingData = payment.metadata.bookingData;
+                    
+                    console.log('📊 [Paystack Webhook] Booking data from metadata:', {
+                        basePrice: bookingData.basePrice,
+                        serviceFee: bookingData.serviceFee,
+                        taxAmount: bookingData.taxAmount,
+                        totalPrice: bookingData.totalPrice,
+                        discountAmount: bookingData.discountAmount
+                    });
 
-                    // Create the booking
+                    // Create the booking with explicitly converted numeric values
                     booking = await Booking.create({
                         ...bookingData,
+                        basePrice: Number(bookingData.basePrice) || 0,
+                        serviceFee: Number(bookingData.serviceFee) || 0,
+                        taxAmount: Number(bookingData.taxAmount) || 0,
+                        totalPrice: Number(bookingData.totalPrice) || 0,
+                        discountAmount: Number(bookingData.discountAmount) || 0,
                         status: 'confirmed', // Set to confirmed since payment is successful
                         paymentStatus: 'completed',
                         paymentMethod,
@@ -361,6 +374,12 @@ class PaystackService {
                     });
 
                     console.log('✅ [Paystack Webhook] Booking created successfully:', booking.id);
+                    console.log('✅ [Paystack Webhook] Created booking pricing:', {
+                        basePrice: booking.basePrice,
+                        serviceFee: booking.serviceFee,
+                        taxAmount: booking.taxAmount,
+                        totalPrice: booking.totalPrice
+                    });
 
                     // Update payment record with bookingId
                     await payment.update({
