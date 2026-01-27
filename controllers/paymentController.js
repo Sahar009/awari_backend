@@ -51,7 +51,16 @@ export const verifyPaymentController = async (req, res) => {
   const validationError = handleValidationErrors(req, res);
   if (validationError) return;
 
-  const { reference } = req.body;
+  // Support both POST (reference in body) and GET (reference in params)
+  const reference = req.body.reference || req.params.reference;
+  
+  if (!reference) {
+    return res.status(400).json({
+      success: false,
+      message: 'Payment reference is required'
+    });
+  }
+
   const result = await verifyPayment(reference);
 
   return res.status(result.statusCode || (result.success ? 200 : 500)).json({

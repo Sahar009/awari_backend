@@ -41,6 +41,13 @@ router.post(
   verifyPaymentController
 );
 
+// GET route for payment verification (used by callback URL)
+router.get(
+  '/verify/:reference',
+  authenticateToken,
+  verifyPaymentController
+);
+
 router.post(
   '/payouts',
   authenticateToken,
