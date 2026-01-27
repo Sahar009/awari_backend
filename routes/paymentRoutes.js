@@ -11,6 +11,7 @@ import {
 import { authenticateToken, requireRole } from '../middlewares/authMiddleware.js';
 import {
   initializePaymentValidation,
+  initializePaymentWithDataValidation,
   verifyPaymentValidation,
   initiatePayoutValidation,
   verifyBankAccountValidation
@@ -29,7 +30,7 @@ router.post(
 router.post(
   '/initialize-booking',
   authenticateToken,
-  initializePaymentValidation,
+  initializePaymentWithDataValidation,
   initializeBookingPaymentWithDataController
 );
 

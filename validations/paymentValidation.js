@@ -27,6 +27,79 @@ export const initializePaymentValidation = [
   body('reference')
     .optional()
     .isString()
+];
+
+// Validation for payment-first flow (no bookingId required)
+export const initializePaymentWithDataValidation = [
+  body('propertyId')
+    .isUUID()
+    .withMessage('Property ID must be a valid UUID'),
+  body('amount')
+    .optional()
+    .isFloat({ gt: 0 })
+    .withMessage('Amount must be a positive number'),
+  body('totalPrice')
+    .optional()
+    .isFloat({ gt: 0 })
+    .withMessage('Total price must be a positive number'),
+  body('currency')
+    .optional()
+    .isLength({ min: 3, max: 3 })
+    .withMessage('Currency must be a 3-letter code'),
+  body('callbackUrl')
+    .isURL()
+    .withMessage('Callback URL must be valid'),
+  body('bookingType')
+    .optional()
+    .isIn(['shortlet', 'hotel', 'rent', 'sale'])
+    .withMessage('Booking type must be valid'),
+  body('checkInDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Check-in date must be a valid date'),
+  body('checkOutDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Check-out date must be a valid date'),
+  body('numberOfGuests')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Number of guests must be at least 1'),
+  body('numberOfNights')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Number of nights must be at least 1'),
+  body('guestName')
+    .optional()
+    .isString()
+    .withMessage('Guest name must be a string'),
+  body('guestEmail')
+    .optional()
+    .isEmail()
+    .withMessage('Guest email must be valid'),
+  body('guestPhone')
+    .optional()
+    .isString()
+    .withMessage('Guest phone must be a string'),
+  body('specialRequests')
+    .optional()
+    .isString()
+    .withMessage('Special requests must be a string'),
+  body('couponCode')
+    .optional()
+    .isString()
+    .withMessage('Coupon code must be a string'),
+  body('channels')
+    .optional()
+    .isArray()
+    .withMessage('Channels must be an array of strings'),
+  body('channels.*')
+    .optional()
+    .isString()
+    .withMessage('Each channel must be a string'),
+  body('reference')
+    .optional()
+    .isString()
     .withMessage('Reference must be a string'),
   body('email')
     .optional()
