@@ -47,7 +47,20 @@ export const initializePaymentWithDataValidation = [
     .isLength({ min: 3, max: 3 })
     .withMessage('Currency must be a 3-letter code'),
   body('callbackUrl')
-    .isURL({ require_protocol: true, accept_localhost: true })
+    .notEmpty()
+    .withMessage('Callback URL is required')
+    .custom((value) => {
+      try {
+        const url = new URL(value);
+        // Allow http/https protocols
+        if (!['http:', 'https:'].includes(url.protocol)) {
+          throw new Error('Protocol must be http or https');
+        }
+        return true;
+      } catch (error) {
+        throw new Error('Callback URL must be a valid URL');
+      }
+    })
     .withMessage('Callback URL must be valid'),
   body('bookingType')
     .optional()

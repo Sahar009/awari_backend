@@ -194,6 +194,21 @@ export const initializeBookingPaymentWithData = async (currentUser, bookingData)
     console.log('💳 [Payment Service] Current user:', { id: currentUser?.id, role: currentUser?.role });
     console.log('💳 [Payment Service] Booking data:', bookingData);
 
+    // Validate current user exists in database
+    if (!currentUser || !currentUser.id) {
+      console.error('❌ [Payment Service] No current user or user ID');
+      return messageHandler('User authentication required', false, BAD_REQUEST);
+    }
+
+    // Verify user exists in database
+    const existingUser = await User.findByPk(currentUser.id);
+    if (!existingUser) {
+      console.error('❌ [Payment Service] User not found in database:', currentUser.id);
+      return messageHandler('User not found in database', false, BAD_REQUEST);
+    }
+
+    console.log('✅ [Payment Service] User verified in database:', existingUser.id);
+
     const {
       propertyId,
       checkInDate,
@@ -345,26 +360,37 @@ export const initializeBookingPaymentWithData = async (currentUser, bookingData)
     const transactionData = paystackResult.data;
 
     console.log('💳 [Payment Service] Creating payment record (without bookingId)');
-
-    // Create payment record without bookingId (will be updated after booking creation)
-    await Payment.create({
+    console.log('💳 [Payment Service] Payment data:', {
       userId: currentUser.id,
-      bookingId: null, // Will be set after booking creation in webhook
       propertyId: property.id,
       amount: paymentAmount,
       currency: paymentCurrency,
-      status: 'pending',
-      paymentMethod: 'paystack',
-      paymentType: 'booking',
-      gateway: 'paystack',
-      reference: transactionData.reference,
-      transactionId: transactionData.access_code,
-      gatewayResponse: transactionData,
-      metadata,
-      description: `Booking payment for ${property.title}`
+      reference: transactionData.reference
     });
 
-    console.log('✅ [Payment Service] Payment record created successfully');
+    // Create payment record without bookingId (will be updated after booking creation)
+    try {
+      await Payment.create({
+        userId: currentUser.id,
+        bookingId: null, // Will be set after booking creation in webhook
+        propertyId: property.id,
+        amount: paymentAmount,
+        currency: paymentCurrency,
+        status: 'pending',
+        paymentMethod: 'paystack',
+        paymentType: 'booking',
+        gateway: 'paystack',
+        reference: transactionData.reference,
+        transactionId: transactionData.access_code,
+        gatewayResponse: transactionData,
+        metadata,
+        description: `Booking payment for ${property.title}` 
+      });
+      console.log('✅ [Payment Service] Payment record created successfully');
+    } catch (dbError) {
+      console.error('❌ [Payment Service] Database error creating payment:', dbError);
+      throw dbError;
+    }
 
     return messageHandler('Payment initialized successfully', true, SUCCESS, {
       authorizationUrl: transactionData.authorization_url,
