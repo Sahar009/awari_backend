@@ -350,7 +350,7 @@ class PaystackService {
 
                 try {
                     const bookingData = payment.metadata.bookingData;
-                    
+
                     console.log('📊 [Paystack Webhook] Booking data from metadata:', {
                         basePrice: bookingData.basePrice,
                         serviceFee: bookingData.serviceFee,
@@ -387,13 +387,21 @@ class PaystackService {
                     });
 
                     // Block dates for the booking
-                    try {
-                        const { blockDatesForBooking } = await import('../../services/availabilityService.js');
-                        await blockDatesForBooking(booking);
-                        console.log('✅ [Paystack Webhook] Dates blocked for booking:', booking.id);
-                    } catch (blockError) {
-                        console.error('❌ [Paystack Webhook] Error blocking dates:', blockError);
-                        // Don't fail the payment processing if date blocking fails
+                    if (booking.bookingType === 'shortlet' || booking.bookingType === 'rental' || booking.bookingType === 'hotel') {
+                        try {
+                            const { blockDatesForBooking } = await import('../../services/availabilityService.js');
+                            await blockDatesForBooking(
+                                booking.propertyId,
+                                booking.id,
+                                booking.checkInDate,
+                                booking.checkOutDate,
+                                booking.userId
+                            );
+                            console.log('✅ [Paystack Webhook] Dates blocked for booking:', booking.id);
+                        } catch (blockError) {
+                            console.error('❌ [Paystack Webhook] Error blocking dates:', blockError);
+                            // Don't fail the payment processing if date blocking fails
+                        }
                     }
                 } catch (bookingError) {
                     console.error('❌ [Paystack Webhook] Error creating booking from metadata:', bookingError);
@@ -432,12 +440,32 @@ class PaystackService {
 
             if (booking) {
                 // Update booking if it already exists (old flow) or was just created (new flow)
+                const previousStatus = booking.status;
                 await booking.update({
                     paymentStatus: 'completed',
                     paymentMethod,
                     transactionId: reference,
                     status: booking.bookingType === 'shortlet' && booking.status === 'pending' ? 'confirmed' : booking.status
                 });
+
+                // Block dates if booking was just confirmed (status changed from pending to confirmed)
+                if (previousStatus === 'pending' && booking.status === 'confirmed' &&
+                    (booking.bookingType === 'shortlet' || booking.bookingType === 'rental' || booking.bookingType === 'hotel')) {
+                    try {
+                        const { blockDatesForBooking } = await import('../../services/availabilityService.js');
+                        await blockDatesForBooking(
+                            booking.propertyId,
+                            booking.id,
+                            booking.checkInDate,
+                            booking.checkOutDate,
+                            booking.userId
+                        );
+                        console.log('✅ [Paystack Webhook] Dates blocked for existing booking:', booking.id);
+                    } catch (blockError) {
+                        console.error('❌ [Paystack Webhook] Error blocking dates for existing booking:', blockError);
+                        // Don't fail the payment processing if date blocking fails
+                    }
+                }
 
                 // Send booking receipt email
                 try {
