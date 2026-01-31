@@ -245,8 +245,9 @@ class PropertyService {
         }
       }
       if (status) whereClause.status = status;
-      if (city) whereClause.city = city;
-      if (state) whereClause.state = state;
+      // Use partial match for location filters (MySQL LIKE is case-insensitive by default)
+      if (city) whereClause.city = { [Op.like]: `%${city}%` };
+      if (state) whereClause.state = { [Op.like]: `%${state}%` };
       if (country) whereClause.country = country;
       if (bedrooms) whereClause.bedrooms = bedrooms;
       if (bathrooms) whereClause.bathrooms = bathrooms;
@@ -261,13 +262,13 @@ class PropertyService {
         if (maxPrice) whereClause.price[Op.lte] = maxPrice;
       }
 
-      // Search filter
+      // Search filter (MySQL LIKE is case-insensitive by default)
       if (search) {
         whereClause[Op.or] = [
-          { title: { [Op.iLike]: `%${search}%` } },
-          { description: { [Op.iLike]: `%${search}%` } },
-          { address: { [Op.iLike]: `%${search}%` } },
-          { neighborhood: { [Op.iLike]: `%${search}%` } }
+          { title: { [Op.like]: `%${search}%` } },
+          { description: { [Op.like]: `%${search}%` } },
+          { address: { [Op.like]: `%${search}%` } },
+          { neighborhood: { [Op.like]: `%${search}%` } }
         ];
       }
 
