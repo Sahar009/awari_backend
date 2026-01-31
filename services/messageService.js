@@ -29,6 +29,23 @@ class MessageService {
         userAgent = null
       } = messageData;
 
+      // Validate sender exists
+      const sender = await User.findByPk(senderId, {
+        paranoid: false
+      });
+      
+      if (!sender) {
+        throw new Error('Sender not found');
+      }
+      
+      if (sender.deletedAt) {
+        throw new Error('Sender account has been deleted');
+      }
+      
+      if (sender.status !== 'active') {
+        throw new Error(`Sender account is ${sender.status}`);
+      }
+
       // Validate receiver exists (check both active and soft-deleted users)
       const receiver = await User.findByPk(receiverId, {
         paranoid: false // Include soft-deleted users to provide better error message

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import crypto from 'crypto';
 import Wallet from '../schema/Wallet.js';
 import { User } from '../schema/index.js';
 import WalletTransaction from '../schema/WalletTransaction.js';
@@ -41,7 +42,7 @@ class WalletService {
         console.warn('⚠️ [WALLET SERVICE] Paystack customer creation failed');
       }
 
-      const walletId = require('crypto').randomUUID();
+      const walletId = crypto.randomUUID();
       const walletAddress = this.generateWalletAddress(user.firstName, user.lastName, walletId);
 
       const wallet = await Wallet.create({

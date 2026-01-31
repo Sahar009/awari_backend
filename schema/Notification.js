@@ -69,10 +69,7 @@ const Notification = sequelize.define('Notification', {
   },
   actionUrl: {
     type: DataTypes.STRING(500),
-    allowNull: true,
-    validate: {
-      isUrl: true
-    }
+    allowNull: true
   },
   actionText: {
     type: DataTypes.STRING(100),
