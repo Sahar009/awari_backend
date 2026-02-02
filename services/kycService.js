@@ -404,6 +404,58 @@ class KycService {
       throw new Error(error.message || 'Failed to fetch KYC statistics');
     }
   }
+
+  /**
+   * Get KYC verification status for a user
+   */
+  async getKycStatus(userId) {
+    try {
+      // Get all user's documents
+      const documents = await KycDocument.findAll({
+        where: { userId },
+        attributes: ['status', 'documentType', 'verifiedAt', 'rejectionReason']
+      });
+
+      const submittedDocuments = documents.length;
+      const approvedDocuments = documents.filter(doc => doc.status === 'approved').length;
+      const pendingDocuments = documents.filter(doc => doc.status === 'pending').length;
+      const rejectedDocuments = documents.filter(doc => doc.status === 'rejected').length;
+
+      // Determine overall status
+      let overallStatus = 'pending';
+      let isVerified = false;
+      let verifiedAt = null;
+      let rejectionReason = null;
+
+      if (approvedDocuments > 0) {
+        overallStatus = 'approved';
+        isVerified = true;
+        const approvedDoc = documents.find(doc => doc.status === 'approved' && doc.verifiedAt);
+        verifiedAt = approvedDoc?.verifiedAt || null;
+      } else if (rejectedDocuments > 0 && pendingDocuments === 0) {
+        overallStatus = 'rejected';
+        const rejectedDoc = documents.find(doc => doc.status === 'rejected');
+        rejectionReason = rejectedDoc?.rejectionReason || null;
+      }
+
+      return {
+        success: true,
+        data: {
+          status: overallStatus,
+          submittedDocuments,
+          approvedDocuments,
+          pendingDocuments,
+          rejectedDocuments,
+          requiredDocuments: 2, // Minimum required documents (can be configured)
+          isVerified,
+          verifiedAt,
+          rejectionReason
+        }
+      };
+    } catch (error) {
+      throw new Error(error.message || 'Failed to fetch KYC status');
+    }
+  }
 }
 
 export default new KycService();

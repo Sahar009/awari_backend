@@ -150,6 +150,23 @@ class AuthController {
         });
       }
 
+      // Validate token format
+      if (typeof idToken !== 'string' || idToken.trim() === '') {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid token format. Token must be a non-empty string.'
+        });
+      }
+
+      // Check for mock tokens
+      if (idToken === 'mock-google-token' || idToken.startsWith('mock-')) {
+        return res.status(400).json({
+          success: false,
+          message: 'Mock tokens are not allowed. Please implement proper Firebase authentication.',
+          hint: 'Use Firebase SDK to get a real ID token from Google Sign-In'
+        });
+      }
+
       const result = await authService.googleSignIn(idToken);
 
       res.status(200).json({
@@ -160,6 +177,14 @@ class AuthController {
     } catch (error) {
       console.error('Google Sign-In error:', error);
       
+      if (error.message === 'Invalid Firebase token') {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid Firebase ID token. Please sign in again.',
+          hint: 'The token may be expired or malformed'
+        });
+      }
+
       if (error.message === 'Invalid Google token') {
         return res.status(401).json({
           success: false,

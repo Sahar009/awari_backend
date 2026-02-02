@@ -328,6 +328,26 @@ class AuthService {
    */
   async verifyFirebaseToken(idToken) {
     try {
+      // Validate token format
+      if (!idToken || typeof idToken !== 'string') {
+        console.error('Invalid token format: Token must be a non-empty string');
+        return null;
+      }
+
+      // Check if it's a mock token (for development)
+      if (idToken === 'mock-google-token' || idToken.startsWith('mock-')) {
+        console.warn('⚠️ Mock Google token detected. This will not work in production.');
+        console.warn('⚠️ Please implement proper Firebase authentication on the frontend.');
+        return null;
+      }
+
+      // Validate JWT format (should have 3 parts separated by dots)
+      const tokenParts = idToken.split('.');
+      if (tokenParts.length !== 3) {
+        console.error('Invalid JWT format: Token should have 3 parts separated by dots');
+        return null;
+      }
+      
       const { getAuth } = await import('firebase-admin/auth');
       
       const auth = getAuth();

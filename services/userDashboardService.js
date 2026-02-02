@@ -36,6 +36,11 @@ export const getMyRentals = async (userId, options = {}) => {
       where: whereClause,
       include: [
         {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+        },
+        {
           model: Property,
           as: 'property',
           include: [
@@ -127,6 +132,11 @@ export const getMyPurchases = async (userId, options = {}) => {
     const { count, rows: bookings } = await Booking.findAndCountAll({
       where: whereClause,
       include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+        },
         {
           model: Property,
           as: 'property',
@@ -246,6 +256,11 @@ export const getMyShortletBookings = async (userId, options = {}) => {
     const { count, rows: bookings } = await Booking.findAndCountAll({
       where: whereClause,
       include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatarUrl']
+        },
         {
           model: Property,
           as: 'property',

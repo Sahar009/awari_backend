@@ -289,6 +289,52 @@ router.post('/', authenticateToken, createKycDocumentUrlValidation, kycControlle
 
 /**
  * @swagger
+ * /api/kyc/status:
+ *   get:
+ *     summary: Get user's KYC verification status
+ *     tags: [KYC Documents]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: KYC verification status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       enum: [pending, approved, rejected]
+ *                     submittedDocuments:
+ *                       type: integer
+ *                     approvedDocuments:
+ *                       type: integer
+ *                     pendingDocuments:
+ *                       type: integer
+ *                     rejectedDocuments:
+ *                       type: integer
+ *                     requiredDocuments:
+ *                       type: integer
+ *                     isVerified:
+ *                       type: boolean
+ *                     verifiedAt:
+ *                       type: string
+ *                       format: date-time
+ *                     rejectionReason:
+ *                       type: string
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/status', authenticateToken, kycController.getKycStatus);
+
+/**
+ * @swagger
  * /api/kyc:
  *   get:
  *     summary: Get user's KYC documents
