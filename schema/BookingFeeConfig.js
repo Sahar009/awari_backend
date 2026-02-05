@@ -8,9 +8,14 @@ const BookingFeeConfig = sequelize.define('BookingFeeConfig', {
         primaryKey: true,
     },
     feeType: {
-        type: DataTypes.ENUM('service_fee', 'tax', 'platform_fee'),
+        type: DataTypes.ENUM('service_fee', 'tax', 'platform_fee', 'agency_fee', 'damage_fee'),
         allowNull: false,
-        comment: 'Type of fee: service_fee, tax, or platform_fee',
+        comment: 'Type of fee: service_fee, tax, platform_fee, agency_fee, or damage_fee',
+    },
+    propertyType: {
+        type: DataTypes.ENUM('rent', 'sale', 'shortlet', 'hotel'),
+        allowNull: true,
+        comment: 'Property type this fee applies to. Null means applies to all types',
     },
     valueType: {
         type: DataTypes.ENUM('percentage', 'fixed'),

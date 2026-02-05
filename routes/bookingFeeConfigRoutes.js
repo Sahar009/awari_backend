@@ -1,6 +1,7 @@
 import express from 'express';
 import {
     getActiveFees,
+    getFeesByPropertyType,
     getAllFees,
     createFee,
     updateFee,
@@ -16,6 +17,13 @@ const router = express.Router();
  * @access  Public
  */
 router.get('/', getActiveFees);
+
+/**
+ * @route   GET /api/booking-fees/property-type/:propertyType
+ * @desc    Get active booking fees for a specific property type (public)
+ * @access  Public
+ */
+router.get('/property-type/:propertyType', getFeesByPropertyType);
 
 /**
  * @route   GET /api/booking-fees/all

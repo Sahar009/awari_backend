@@ -10,6 +10,7 @@
     "test": "jest",
     "migrate": "sequelize-cli db:migrate",
     "migrate:undo": "sequelize-cli db:migrate:undo",
+    "migrate-fees": "node scripts/migrate-booking-fees.js",
     "seed": "sequelize-cli db:seed:all",
     "seed:undo": "sequelize-cli db:seed:undo:all",
     "create-tables": "node scripts/create-tables.js",

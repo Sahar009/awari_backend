@@ -11,7 +11,7 @@ export const getActiveFees = async (req, res) => {
                 isActive: true
             },
             order: [['feeType', 'ASC'], ['createdAt', 'DESC']],
-            attributes: ['id', 'feeType', 'valueType', 'value', 'description']
+            attributes: ['id', 'feeType', 'valueType', 'value', 'description', 'propertyType']
         });
 
         res.status(200).json({
@@ -20,6 +20,49 @@ export const getActiveFees = async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching active fees:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch booking fees',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Get active booking fees for a specific property type (public endpoint)
+ */
+export const getFeesByPropertyType = async (req, res) => {
+    try {
+        const { propertyType } = req.params;
+
+        // Validate property type
+        const validPropertyTypes = ['rent', 'sale', 'shortlet', 'hotel'];
+        if (!validPropertyTypes.includes(propertyType)) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid propertyType. Must be one of: ${validPropertyTypes.join(', ')}`
+            });
+        }
+
+        // Fetch fees that apply to this property type or all property types (null)
+        const fees = await BookingFeeConfig.findAll({
+            where: {
+                isActive: true,
+                [Op.or]: [
+                    { propertyType: propertyType },
+                    { propertyType: null }
+                ]
+            },
+            order: [['feeType', 'ASC'], ['createdAt', 'DESC']],
+            attributes: ['id', 'feeType', 'valueType', 'value', 'description', 'propertyType']
+        });
+
+        res.status(200).json({
+            success: true,
+            data: fees
+        });
+    } catch (error) {
+        console.error('Error fetching fees by property type:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch booking fees',
@@ -56,7 +99,7 @@ export const getAllFees = async (req, res) => {
  */
 export const createFee = async (req, res) => {
     try {
-        const { feeType, valueType, value, isActive, description } = req.body;
+        const { feeType, valueType, value, isActive, description, propertyType } = req.body;
 
         // Validation
         if (!feeType || !valueType || value === undefined || value === null) {
@@ -67,12 +110,23 @@ export const createFee = async (req, res) => {
         }
 
         // Validate fee type
-        const validFeeTypes = ['service_fee', 'tax', 'platform_fee'];
+        const validFeeTypes = ['service_fee', 'tax', 'platform_fee', 'agency_fee', 'damage_fee'];
         if (!validFeeTypes.includes(feeType)) {
             return res.status(400).json({
                 success: false,
                 message: `Invalid feeType. Must be one of: ${validFeeTypes.join(', ')}`
             });
+        }
+
+        // Validate property type if provided
+        if (req.body.propertyType) {
+            const validPropertyTypes = ['rent', 'sale', 'shortlet', 'hotel'];
+            if (!validPropertyTypes.includes(req.body.propertyType)) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid propertyType. Must be one of: ${validPropertyTypes.join(', ')}`
+                });
+            }
         }
 
         // Validate value type
@@ -118,7 +172,8 @@ export const createFee = async (req, res) => {
             valueType,
             value: numValue,
             isActive: isActive !== false, // Default to true if not specified
-            description: description || null
+            description: description || null,
+            propertyType: propertyType || null
         });
 
         res.status(201).json({
@@ -142,7 +197,7 @@ export const createFee = async (req, res) => {
 export const updateFee = async (req, res) => {
     try {
         const { id } = req.params;
-        const { feeType, valueType, value, isActive, description } = req.body;
+        const { feeType, valueType, value, isActive, description, propertyType } = req.body;
 
         const fee = await BookingFeeConfig.findByPk(id);
         if (!fee) {
@@ -193,6 +248,7 @@ export const updateFee = async (req, res) => {
         if (value !== undefined && value !== null) updateData.value = parseFloat(value);
         if (isActive !== undefined) updateData.isActive = isActive;
         if (description !== undefined) updateData.description = description;
+        if (propertyType !== undefined) updateData.propertyType = propertyType;
 
         await fee.update(updateData);
 
