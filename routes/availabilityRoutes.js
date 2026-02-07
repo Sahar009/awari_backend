@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticateToken, requireRole } from '../middlewares/authMiddleware.js';
+import { Property } from '../schema/index.js';
 import {
   getAvailabilityCalendar,
   getUnavailableDates,
@@ -582,6 +583,23 @@ router.post('/block-multiple/:propertyId', authenticateToken, async (req, res) =
       });
     }
 
+    // Verify property exists and user has permission
+    const property = await Property.findByPk(propertyId);
+    if (!property) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Property not found' 
+      });
+    }
+
+    // If user is not admin, verify they own the property
+    if (req.user.role !== 'admin' && property.ownerId !== userId) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Not authorized to modify this property' 
+      });
+    }
+
     const availabilityRecords = await blockMultipleDates(propertyId, dates, reason, userId, notes);
 
     res.json({
@@ -593,8 +611,8 @@ router.post('/block-multiple/:propertyId', authenticateToken, async (req, res) =
     console.error('Error blocking multiple dates:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to block multiple dates',
-      error: error.message
+      message: error.message || 'Failed to block multiple dates',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });

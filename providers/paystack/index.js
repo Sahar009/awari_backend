@@ -367,7 +367,7 @@ class PaystackService {
                         taxAmount: Number(bookingData.taxAmount) || 0,
                         totalPrice: Number(bookingData.totalPrice) || 0,
                         discountAmount: Number(bookingData.discountAmount) || 0,
-                        status: 'confirmed', // Set to confirmed since payment is successful
+                        status: 'in_progress', // Set to in_progress - requires landlord/agent approval
                         paymentStatus: 'completed',
                         paymentMethod,
                         transactionId: reference
@@ -386,23 +386,8 @@ class PaystackService {
                         bookingId: booking.id
                     });
 
-                    // Block dates for the booking
-                    if (booking.bookingType === 'shortlet' || booking.bookingType === 'rental' || booking.bookingType === 'hotel') {
-                        try {
-                            const { blockDatesForBooking } = await import('../../services/availabilityService.js');
-                            await blockDatesForBooking(
-                                booking.propertyId,
-                                booking.id,
-                                booking.checkInDate,
-                                booking.checkOutDate,
-                                booking.userId
-                            );
-                            console.log('✅ [Paystack Webhook] Dates blocked for booking:', booking.id);
-                        } catch (blockError) {
-                            console.error('❌ [Paystack Webhook] Error blocking dates:', blockError);
-                            // Don't fail the payment processing if date blocking fails
-                        }
-                    }
+                    // Note: Dates will be blocked when landlord/agent approves the booking
+                    // Not blocking automatically after payment - requires manual approval
                 } catch (bookingError) {
                     console.error('❌ [Paystack Webhook] Error creating booking from metadata:', bookingError);
                     // Update payment but mark as needing manual review
@@ -441,11 +426,47 @@ class PaystackService {
             if (booking) {
                 // Update booking if it already exists (old flow) or was just created (new flow)
                 const previousStatus = booking.status;
+                
+                // For shortlets and hotels, check availability one more time before confirming
+                if (previousStatus === 'pending' && 
+                    (booking.bookingType === 'shortlet' || booking.bookingType === 'hotel')) {
+                    try {
+                        const { checkDateRangeAvailability } = await import('../../services/availabilityService.js');
+                        const availabilityCheck = await checkDateRangeAvailability(
+                            booking.propertyId,
+                            booking.checkInDate,
+                            booking.checkOutDate
+                        );
+                        
+                        if (!availabilityCheck.available) {
+                            console.error('❌ [Paystack Webhook] Dates no longer available for booking:', booking.id);
+                            // Update booking to failed status
+                            await booking.update({
+                                paymentStatus: 'refund_pending',
+                                status: 'cancelled',
+                                failureReason: 'Dates no longer available - another booking was confirmed first'
+                            });
+                            
+                            // Update payment to refund pending
+                            await payment.update({
+                                status: 'refund_pending',
+                                failureReason: 'Dates no longer available'
+                            });
+                            
+                            console.log('⚠️ [Paystack Webhook] Booking cancelled due to unavailable dates, refund pending');
+                            return; // Exit early
+                        }
+                    } catch (availabilityError) {
+                        console.error('❌ [Paystack Webhook] Error checking availability:', availabilityError);
+                        // Continue with booking confirmation if availability check fails
+                    }
+                }
+                
                 await booking.update({
                     paymentStatus: 'completed',
                     paymentMethod,
                     transactionId: reference,
-                    status: booking.bookingType === 'shortlet' && booking.status === 'pending' ? 'confirmed' : booking.status
+                    status: (booking.bookingType === 'shortlet' || booking.bookingType === 'hotel') && booking.status === 'pending' ? 'in_progress' : booking.status
                 });
 
                 // Block dates if booking was just confirmed (status changed from pending to confirmed)

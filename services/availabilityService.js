@@ -1,5 +1,6 @@
-import { PropertyAvailability, Property, Booking } from '../schema/index.js';
+import { PropertyAvailability, Property, Booking, User } from '../schema/index.js';
 import { Op } from 'sequelize';
+import sequelize from '../database/db.js';
 
 /**
  * Availability Service
@@ -104,9 +105,19 @@ export const isDateAvailable = async (propertyId, date) => {
  * @param {string} bookingId - Optional booking ID if reason is 'booking'
  * @returns {Object} Created availability record
  */
-export const blockDate = async (propertyId, date, reason, createdBy, notes = null, bookingId = null) => {
+export const blockDate = async (propertyId, date, reason, createdBy, notes = null, bookingId = null, transaction = null) => {
   try {
     const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
+
+    // Check if user exists if createdBy is provided
+    let validCreatedBy = createdBy;
+    if (createdBy) {
+      const user = await User.findByPk(createdBy, { transaction });
+      if (!user) {
+        console.warn(`User with ID ${createdBy} not found, proceeding without user reference`);
+        validCreatedBy = null;
+      }
+    }
 
     // Check if date is already blocked
     const existingBlock = await PropertyAvailability.findOne({
@@ -114,7 +125,8 @@ export const blockDate = async (propertyId, date, reason, createdBy, notes = nul
         propertyId,
         date: dateStr,
         isActive: true
-      }
+      },
+      transaction
     });
 
     if (existingBlock) {
@@ -127,14 +139,14 @@ export const blockDate = async (propertyId, date, reason, createdBy, notes = nul
       reason,
       bookingId,
       notes,
-      createdBy,
+      createdBy: validCreatedBy,
       isActive: true
-    });
+    }, { transaction });
 
     return availabilityRecord;
   } catch (error) {
     console.error('Error blocking date:', error);
-    throw new Error('Failed to block date');
+    throw error; // Re-throw original error to preserve 'Date is already blocked' message
   }
 };
 
@@ -175,27 +187,58 @@ export const unblockDate = async (propertyId, date) => {
  * @param {string} notes - Optional notes
  * @returns {Array} Array of created availability records
  */
-export const blockMultipleDates = async (propertyId, dates, reason, createdBy, notes = null) => {
-  try {
-    const availabilityRecords = [];
+export const blockMultipleDates = async (propertyId, dates, reason, createdBy, notes = null, bookingId = null, transaction = null) => {
+  const useTransaction = !transaction;
+  const currentTransaction = transaction || await sequelize.transaction();
+  const results = [];
+  let hasError = false;
+  let error = null;
 
-    for (const date of dates) {
-      try {
-        const record = await blockDate(propertyId, date, reason, createdBy, notes);
-        availabilityRecords.push(record);
-      } catch (error) {
-        // Skip if date is already blocked
-        if (error.message === 'Date is already blocked') {
-          continue;
-        }
-        throw error;
+  try {
+    // Check if user exists if createdBy is provided
+    let validCreatedBy = createdBy;
+    if (createdBy) {
+      const user = await User.findByPk(createdBy, { transaction: currentTransaction });
+      if (!user) {
+        console.warn(`User with ID ${createdBy} not found, proceeding without user reference`);
+        validCreatedBy = null;
       }
     }
 
-    return availabilityRecords;
+    // Process each date
+    for (const date of dates) {
+      try {
+        const record = await blockDate(propertyId, date, reason, validCreatedBy, notes, bookingId, currentTransaction);
+        results.push(record);
+      } catch (err) {
+        console.error(`Error blocking date ${date}:`, err);
+        // Skip if date is already blocked
+        if (err.message === 'Date is already blocked') {
+          continue;
+        }
+        hasError = true;
+        error = err;
+        break; // Stop processing on first error (except already blocked dates)
+      }
+    }
+
+    if (hasError) {
+      if (useTransaction) {
+        await currentTransaction.rollback();
+      }
+      throw error || new Error('Failed to block one or more dates');
+    }
+
+    if (useTransaction) {
+      await currentTransaction.commit();
+    }
+    return results;
   } catch (error) {
-    console.error('Error blocking multiple dates:', error);
-    throw new Error('Failed to block multiple dates');
+    if (useTransaction && currentTransaction && !currentTransaction.finished) {
+      await currentTransaction.rollback();
+    }
+    console.error('Error in blockMultipleDates:', error);
+    throw new Error('Failed to block multiple dates: ' + error.message);
   }
 };
 
@@ -230,7 +273,7 @@ export const unblockMultipleDates = async (propertyId, dates) => {
  * @param {string} createdBy - User ID who created the booking
  * @returns {Array} Array of created availability records
  */
-export const blockDatesForBooking = async (propertyId, bookingId, checkInDate, checkOutDate, createdBy) => {
+export const blockDatesForBooking = async (propertyId, bookingId, checkInDate, checkOutDate, createdBy, transaction = null) => {
   try {
     const dates = [];
     const currentDate = new Date(checkInDate);
@@ -248,7 +291,8 @@ export const blockDatesForBooking = async (propertyId, bookingId, checkInDate, c
       'booking',
       createdBy,
       `Blocked for booking ${bookingId}`,
-      bookingId
+      bookingId,
+      transaction
     );
   } catch (error) {
     console.error('Error blocking dates for booking:', error);

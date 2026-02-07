@@ -406,6 +406,9 @@ export const createBooking = async (userId, bookingData) => {
       const booking = await Booking.create(bookingPayload, { transaction });
       console.log('✅ [BOOKING SERVICE] Booking created successfully:', booking.id);
 
+      // Note: Dates will be blocked only after successful payment confirmation
+      // This happens in the payment webhook/callback or confirmBooking function
+
       // Commit transaction
       await transaction.commit();
       console.log('✅ [BOOKING SERVICE] Transaction committed successfully');
@@ -1202,10 +1205,10 @@ export const confirmBooking = async (bookingId, userId, ownerNotes = null) => {
     }
 
     // Check if booking can be confirmed
-    if (booking.status !== 'pending') {
+    if (booking.status !== 'pending' && booking.status !== 'in_progress') {
       return {
         success: false,
-        message: 'Only pending bookings can be confirmed',
+        message: 'Only pending or in-progress bookings can be confirmed',
         statusCode: 400
       };
     }
@@ -1318,19 +1321,43 @@ export const rejectBooking = async (bookingId, userId, ownerNotes = null) => {
     }
 
     // Check if booking can be rejected
-    if (booking.status !== 'pending') {
+    if (booking.status !== 'pending' && booking.status !== 'in_progress') {
       return {
         success: false,
-        message: 'Only pending bookings can be rejected',
+        message: 'Only pending or in-progress bookings can be rejected',
         statusCode: 400
       };
     }
 
+    // If payment was completed, mark for refund
+    const shouldRefund = booking.paymentStatus === 'completed';
+    
     // Update booking status
     await booking.update({
       status: 'rejected',
-      ownerNotes
+      paymentStatus: shouldRefund ? 'refund_pending' : booking.paymentStatus,
+      ownerNotes,
+      failureReason: ownerNotes || 'Booking rejected by property owner'
     });
+
+    // Update payment record if exists
+    if (shouldRefund && booking.transactionId) {
+      try {
+        const payment = await Payment.findOne({
+          where: { reference: booking.transactionId }
+        });
+        
+        if (payment) {
+          await payment.update({
+            status: 'refund_pending',
+            failureReason: 'Booking rejected by property owner'
+          });
+          console.log('✅ Payment marked for refund:', payment.id);
+        }
+      } catch (paymentError) {
+        console.error('Error updating payment for refund:', paymentError);
+      }
+    }
 
     // Fetch updated booking with relations
     const updatedBooking = await Booking.findByPk(bookingId, {
@@ -1359,9 +1386,57 @@ export const rejectBooking = async (bookingId, userId, ownerNotes = null) => {
       ]
     });
 
+    // Send notification to guest about booking rejection
+    try {
+      const guest = await User.findByPk(booking.userId);
+      if (guest) {
+        await sendTemplateNotification('BOOKING_REJECTED', guest, {
+          booking: updatedBooking,
+          property: updatedBooking.property,
+          reason: ownerNotes || 'Property owner rejected the booking',
+          refundStatus: shouldRefund ? 'Your payment will be refunded within 5-7 business days' : 'No payment was made'
+        });
+        
+        // Send email notification
+        await sendEmail({
+          to: guest.email,
+          subject: `Booking Rejected - ${updatedBooking.property.title}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #dc2626;">Booking Rejected</h2>
+              <p>Dear ${guest.firstName},</p>
+              <p>Unfortunately, your booking request for <strong>${updatedBooking.property.title}</strong> has been rejected by the property owner.</p>
+              
+              <div style="background-color: #fee2e2; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p style="margin: 0;"><strong>Reason:</strong> ${ownerNotes || 'Property owner rejected the booking'}</p>
+              </div>
+              
+              ${shouldRefund ? `
+                <div style="background-color: #dbeafe; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                  <p style="margin: 0;"><strong>Refund Status:</strong> Your payment will be refunded within 5-7 business days.</p>
+                  <p style="margin: 10px 0 0 0;"><strong>Amount:</strong> ₦${parseFloat(updatedBooking.totalPrice).toLocaleString('en-NG')}</p>
+                </div>
+              ` : ''}
+              
+              <p>We apologize for any inconvenience. Please feel free to browse other available properties on our platform.</p>
+              
+              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                <p style="color: #6b7280; font-size: 12px;">
+                  If you have any questions, please contact our support team.
+                </p>
+              </div>
+            </div>
+          `
+        });
+        console.log('✅ Rejection notification sent to guest');
+      }
+    } catch (notificationError) {
+      console.error('Error sending booking rejection notification:', notificationError);
+    }
+
     return {
       success: true,
-      message: 'Booking rejected successfully',
+      message: shouldRefund ? 'Booking rejected successfully. Refund will be processed.' : 'Booking rejected successfully',
       data: updatedBooking,
       statusCode: 200
     };

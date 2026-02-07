@@ -358,7 +358,13 @@ class PropertyService {
       if (propertyType) whereClause.propertyType = propertyType;
       if (listingType) whereClause.listingType = listingType;
 
-      const { count, rows } = await Property.findAndCountAll({
+      // Get total count separately to avoid issues with joins
+      const count = await Property.count({
+        where: whereClause
+      });
+
+      // Get paginated properties with all associations
+      const rows = await Property.findAll({
         where: whereClause,
         include: [
           {
