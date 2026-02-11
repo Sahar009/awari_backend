@@ -54,11 +54,17 @@ const Wallet = sequelize.define('Wallet', {
     allowNull: true,
     comment: 'Bank code for the dedicated virtual account'
   },
-  balance: {
+  availableBalance: {
     type: DataTypes.DECIMAL(15, 2),
     defaultValue: 0.00,
     allowNull: false,
-    comment: 'Wallet balance in NGN'
+    comment: 'Available balance that can be withdrawn'
+  },
+  pendingBalance: {
+    type: DataTypes.DECIMAL(15, 2),
+    defaultValue: 0.00,
+    allowNull: false,
+    comment: 'Pending balance locked until booking check-in'
   },
   currency: {
     type: DataTypes.STRING(3),

@@ -19,6 +19,7 @@ import walletRoutes from './walletRoutes.js';
 import paystackWebhookRoutes from './paystackWebhookRoutes.js';
 import adminWithdrawalRoutes from './adminWithdrawalRoutes.js';
 import bookingFeeConfigRoutes from './bookingFeeConfigRoutes.js';
+import adminBookingRoutes from './adminBookingRoutes.js';
 import { sendEmail } from '../modules/notifications/email.js';
 
 const router = (app) => {
@@ -38,6 +39,7 @@ const router = (app) => {
   app.use('/api/wallet', walletRoutes);
   app.use('/api/paystack', paystackWebhookRoutes);
   app.use('/api/admin/withdrawals', adminWithdrawalRoutes);
+  app.use('/api/admin/bookings', adminBookingRoutes);
   app.use('/api/user-dashboard', userDashboardRoutes);
   app.use('/api/landlord/dashboard', landlordDashboardRoutes);
   app.use('/api/hotel/dashboard', hotelDashboardRoutes);

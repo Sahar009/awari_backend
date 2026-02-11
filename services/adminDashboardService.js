@@ -1,6 +1,6 @@
 import { Op, fn, col, literal } from 'sequelize';
 import crypto from 'crypto';
-import { User, Property, Booking, Payment, Subscription, Review, KycDocument, SubscriptionPlan, Notification } from '../schema/index.js';
+import { User, Property, PropertyMedia, Booking, Payment, Subscription, Review, KycDocument, SubscriptionPlan, Notification, Wallet, WalletTransaction } from '../schema/index.js';
 import { sendEmail } from '../modules/notifications/email.js';
 import propertyService from './propertyService.js';
 import subscriptionService from './subscriptionService.js';
@@ -433,12 +433,35 @@ export const getUserDetails = async (userId) => {
       attributes: baseAttributes,
       include: [
         {
+          model: Wallet,
+          as: 'wallet',
+          attributes: ['availableBalance', 'pendingBalance', 'currency', 'status', 'accountNumber', 'accountName', 'bankName', 'bankCode', 'walletAddress']
+        },
+        {
+          model: WalletTransaction,
+          as: 'walletTransactions',
+          separate: true,
+          limit: 10,
+          order: [['createdAt', 'DESC']],
+          attributes: ['id', 'type', 'amount', 'currency', 'status', 'description', 'createdAt']
+        },
+        {
           model: Property,
           as: 'ownedProperties',
           separate: true,
           limit: 10,
           order: [['createdAt', 'DESC']],
-          attributes: ['id', 'title', 'listingType', 'status', 'city', 'state', 'createdAt']
+          attributes: ['id', 'title', 'listingType', 'status', 'city', 'state', 'createdAt'],
+          include: [
+            {
+              model: PropertyMedia,
+              as: 'media',
+              where: { mediaType: 'image' },
+              attributes: ['url', 'thumbnailUrl', 'isPrimary'],
+              limit: 1,
+              required: false
+            }
+          ]
         },
         {
           model: Booking,
@@ -481,7 +504,7 @@ export const getUserDetails = async (userId) => {
           separate: true,
           limit: 10,
           order: [['createdAt', 'DESC']],
-          attributes: ['id', 'documentType', 'status', 'verifiedAt', 'createdAt']
+          attributes: ['id', 'documentType', 'status', 'verifiedAt', 'createdAt', 'documentUrl', 'documentThumbnail', 'documentNumber']
         },
         {
           model: Review,
@@ -509,12 +532,20 @@ export const getUserDetails = async (userId) => {
       };
     }
 
-    const [totalOwnedProperties, totalBookings, activeBookings, totalReviews, activeSubscriptions] = await Promise.all([
+    const [
+      totalOwnedProperties,
+      totalBookings,
+      activeBookings,
+      totalReviews,
+      activeSubscriptions,
+      walletInfo
+    ] = await Promise.all([
       Property.count({ where: { ownerId: userId } }),
       Booking.count({ where: { userId } }),
       Booking.count({ where: { userId, status: { [Op.in]: ['confirmed', 'completed'] } } }),
       Review.count({ where: { reviewerId: userId } }),
-      Subscription.count({ where: { userId, status: 'active' } })
+      Subscription.count({ where: { userId, status: 'active' } }),
+      Wallet.findOne({ where: { userId }, attributes: ['availableBalance', 'pendingBalance', 'currency'] })
     ]);
 
     return {
@@ -527,7 +558,10 @@ export const getUserDetails = async (userId) => {
           totalBookings,
           activeBookings,
           totalReviews,
-          activeSubscriptions
+          activeSubscriptions,
+          walletBalance: Number(walletInfo?.availableBalance || 0),
+          pendingWalletBalance: Number(walletInfo?.pendingBalance || 0),
+          currency: walletInfo?.currency || 'NGN'
         }
       },
       statusCode: 200

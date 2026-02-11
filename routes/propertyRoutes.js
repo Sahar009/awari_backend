@@ -1,5 +1,6 @@
 import express from 'express';
 import propertyController from '../controllers/propertyController.js';
+import { getPropertyAvailability } from '../controllers/propertyAvailabilityController.js';
 import { authenticateToken, requireRole } from '../middlewares/authMiddleware.js';
 import {
   createPropertyValidation,
@@ -826,14 +827,14 @@ router.post('/', authenticateToken, createPropertyValidation, propertyController
 // Debug route to check user authentication
 router.get('/debug/user-auth', authenticateToken, propertyController.checkUserAuth);
 
-router.post('/upload', 
-  authenticateToken, 
-  uploadPropertyMedia, 
+router.post('/upload',
+  authenticateToken,
+  uploadPropertyMedia,
   handlePropertyUploadError,
   processPropertyUploadedFiles,
   parseFormDataArrays,
   validatePropertyFileCount(8, 2, 3),
-  createPropertyValidation, 
+  createPropertyValidation,
   propertyController.createProperty
 );
 
@@ -983,10 +984,10 @@ router.delete('/:propertyId', authenticateToken, propertyIdValidation, propertyC
  *       500:
  *         description: Internal server error
  */
-router.post('/:propertyId/media', 
-  authenticateToken, 
+router.post('/:propertyId/media',
+  authenticateToken,
   propertyIdValidation,
-  uploadPropertyMedia, 
+  uploadPropertyMedia,
   handlePropertyUploadError,
   processPropertyUploadedFiles,
   validatePropertyFileUpload,
@@ -1044,10 +1045,10 @@ router.post('/:propertyId/media',
  *       500:
  *         description: Internal server error
  */
-router.put('/:propertyId/media/order', 
-  authenticateToken, 
-  propertyIdValidation, 
-  updateMediaOrderValidation, 
+router.put('/:propertyId/media/order',
+  authenticateToken,
+  propertyIdValidation,
+  updateMediaOrderValidation,
   propertyController.updateMediaOrder
 );
 
@@ -1298,11 +1299,11 @@ router.get('/admin/:propertyId', authenticateToken, requireRole(['admin']), prop
  *       500:
  *         description: Internal server error
  */
-router.put('/admin/:propertyId/moderate', 
-  authenticateToken, 
-  requireRole(['admin']), 
-  propertyIdValidation, 
-  moderatePropertyValidation, 
+router.put('/admin/:propertyId/moderate',
+  authenticateToken,
+  requireRole(['admin']),
+  propertyIdValidation,
+  moderatePropertyValidation,
   propertyController.moderateProperty
 );
 
@@ -1362,5 +1363,41 @@ router.put('/admin/:propertyId/moderate',
  *         description: Internal server error
  */
 router.get('/admin/statistics', authenticateToken, requireRole(['admin']), propertyController.getPropertyStatistics);
+
+/**
+ * @swagger
+ * /api/properties/{propertyId}/availability:
+ *   get:
+ *     summary: Get property availability calendar
+ *     tags: [Properties]
+ *     parameters:
+ *       - in: path
+ *         name: propertyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Property ID
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Start date (YYYY-MM-DD)
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: End date (YYYY-MM-DD)
+ *     responses:
+ *       200:
+ *         description: Availability data retrieved successfully
+ *       404:
+ *         description: Property not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/:propertyId/availability', getPropertyAvailability);
 
 export default router;

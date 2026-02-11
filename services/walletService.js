@@ -27,11 +27,11 @@ class WalletService {
 
       let paystackCustomer = null;
       let dedicatedAccount = null;
-      
+
       try {
         paystackCustomer = await this.createPaystackCustomer(user);
         console.log(`✅ [WALLET SERVICE] Paystack customer created`);
-        
+
         try {
           dedicatedAccount = await this.createDedicatedVirtualAccount(paystackCustomer.customer_code, user);
           console.log(`✅ [WALLET SERVICE] DVA created`);
@@ -55,7 +55,8 @@ class WalletService {
         accountName: dedicatedAccount?.account_name || null,
         bankName: dedicatedAccount?.bank?.name || null,
         bankCode: dedicatedAccount?.bank?.code || null,
-        balance: 0.00,
+        availableBalance: 0.00,
+        pendingBalance: 0.00,
         currency: 'NGN',
         status: 'active',
         metadata: {
@@ -144,7 +145,7 @@ class WalletService {
 
   async getWalletByUserId(userId) {
     try {
-      const wallet = await Wallet.findOne({ 
+      const wallet = await Wallet.findOne({
         where: { userId },
         include: [{
           model: User,
@@ -164,7 +165,7 @@ class WalletService {
       const wallet = await this.getOrCreateWallet(userId);
       const currentBalance = parseFloat(wallet.balance);
       const changeAmount = parseFloat(amount);
-      
+
       let newBalance;
       if (type === 'credit') {
         newBalance = currentBalance + changeAmount;
@@ -228,19 +229,19 @@ class WalletService {
 
   async fundWallet(userId, amount, paystackReference, metadata = {}) {
     const transaction = await sequelize.transaction();
-    
+
     try {
       const wallet = await this.getOrCreateWallet(userId);
-      
+
       if (wallet.status !== 'active') {
         throw new Error('Wallet is not active');
       }
-      
+
       const balanceBefore = parseFloat(wallet.balance);
       const fundAmount = parseFloat(amount);
       const balanceAfter = balanceBefore + fundAmount;
       const reference = `FUND-${Date.now()}-${userId.substring(0, 8)}`;
-      
+
       const txn = await WalletTransaction.create({
         walletId: wallet.id,
         userId,
@@ -255,12 +256,12 @@ class WalletService {
         paystackReference,
         metadata
       }, { transaction });
-      
+
       await wallet.update({
         balance: balanceAfter,
         lastTransactionAt: new Date()
       }, { transaction });
-      
+
       await transaction.commit();
       console.log(`✅ Wallet funded: ${fundAmount} NGN for user ${userId}`);
       return txn;
@@ -273,24 +274,24 @@ class WalletService {
 
   async makePayment(userId, amount, description, bookingId = null, metadata = {}) {
     const transaction = await sequelize.transaction();
-    
+
     try {
       const wallet = await this.getOrCreateWallet(userId);
-      
+
       if (wallet.status !== 'active') {
         throw new Error('Wallet is not active');
       }
-      
+
       const balanceBefore = parseFloat(wallet.balance);
       const paymentAmount = parseFloat(amount);
-      
+
       if (balanceBefore < paymentAmount) {
         throw new Error('Insufficient wallet balance');
       }
-      
+
       const balanceAfter = balanceBefore - paymentAmount;
       const reference = `PAY-${Date.now()}-${userId.substring(0, 8)}`;
-      
+
       const txn = await WalletTransaction.create({
         walletId: wallet.id,
         userId,
@@ -305,12 +306,12 @@ class WalletService {
         bookingId,
         metadata
       }, { transaction });
-      
+
       await wallet.update({
         balance: balanceAfter,
         lastTransactionAt: new Date()
       }, { transaction });
-      
+
       await transaction.commit();
       console.log(`✅ Payment made: ${paymentAmount} NGN from user ${userId}`);
       return txn;
@@ -323,14 +324,14 @@ class WalletService {
 
   async processRefund(userId, amount, description, originalTransactionId = null, metadata = {}) {
     const transaction = await sequelize.transaction();
-    
+
     try {
       const wallet = await this.getOrCreateWallet(userId);
       const balanceBefore = parseFloat(wallet.balance);
       const refundAmount = parseFloat(amount);
       const balanceAfter = balanceBefore + refundAmount;
       const reference = `REFUND-${Date.now()}-${userId.substring(0, 8)}`;
-      
+
       const txn = await WalletTransaction.create({
         walletId: wallet.id,
         userId,
@@ -345,12 +346,12 @@ class WalletService {
         relatedTransactionId: originalTransactionId,
         metadata
       }, { transaction });
-      
+
       await wallet.update({
         balance: balanceAfter,
         lastTransactionAt: new Date()
       }, { transaction });
-      
+
       await transaction.commit();
       console.log(`✅ Refund processed: ${refundAmount} NGN to user ${userId}`);
       return txn;
@@ -363,24 +364,24 @@ class WalletService {
 
   async requestWithdrawal(userId, amount, bankDetails, metadata = {}) {
     const transaction = await sequelize.transaction();
-    
+
     try {
       const wallet = await this.getOrCreateWallet(userId);
-      
+
       if (wallet.status !== 'active') {
         throw new Error('Wallet is not active');
       }
-      
+
       const balanceBefore = parseFloat(wallet.balance);
       const withdrawalAmount = parseFloat(amount);
-      
+
       if (balanceBefore < withdrawalAmount) {
         throw new Error('Insufficient wallet balance');
       }
-      
+
       const balanceAfter = balanceBefore - withdrawalAmount;
       const reference = `WD-${Date.now()}-${userId.substring(0, 8)}`;
-      
+
       const txn = await WalletTransaction.create({
         walletId: wallet.id,
         userId,
@@ -394,12 +395,12 @@ class WalletService {
         paymentMethod: 'bank_transfer',
         metadata: { ...metadata, bankDetails }
       }, { transaction });
-      
+
       await wallet.update({
         balance: balanceAfter,
         lastTransactionAt: new Date()
       }, { transaction });
-      
+
       await transaction.commit();
       console.log(`✅ Withdrawal requested: ${withdrawalAmount} NGN for user ${userId}`);
       return txn;
@@ -416,14 +417,14 @@ class WalletService {
       const where = { userId };
       if (type) where.type = type;
       if (status) where.status = status;
-      
+
       const { count, rows } = await WalletTransaction.findAndCountAll({
         where,
         limit,
         offset,
         order: [['createdAt', 'DESC']]
       });
-      
+
       return {
         transactions: rows,
         total: count,
@@ -439,27 +440,27 @@ class WalletService {
 
   async transferBetweenWallets(fromUserId, toUserId, amount, description = 'Wallet transfer') {
     const transaction = await sequelize.transaction();
-    
+
     try {
       const fromWallet = await this.getOrCreateWallet(fromUserId);
       const toWallet = await this.getOrCreateWallet(toUserId);
-      
+
       if (fromWallet.status !== 'active' || toWallet.status !== 'active') {
         throw new Error('One or both wallets are not active');
       }
-      
+
       const transferAmount = parseFloat(amount);
       const fromBalanceBefore = parseFloat(fromWallet.balance);
-      
+
       if (fromBalanceBefore < transferAmount) {
         throw new Error('Insufficient wallet balance');
       }
-      
+
       const fromBalanceAfter = fromBalanceBefore - transferAmount;
       const toBalanceBefore = parseFloat(toWallet.balance);
       const toBalanceAfter = toBalanceBefore + transferAmount;
       const reference = `TRF-${Date.now()}-${fromUserId.substring(0, 8)}`;
-      
+
       const debitTxn = await WalletTransaction.create({
         walletId: fromWallet.id,
         userId: fromUserId,
@@ -473,7 +474,7 @@ class WalletService {
         paymentMethod: 'wallet',
         metadata: { recipientUserId: toUserId }
       }, { transaction });
-      
+
       const creditTxn = await WalletTransaction.create({
         walletId: toWallet.id,
         userId: toUserId,
@@ -488,23 +489,272 @@ class WalletService {
         relatedTransactionId: debitTxn.id,
         metadata: { senderUserId: fromUserId }
       }, { transaction });
-      
+
       await fromWallet.update({
         balance: fromBalanceAfter,
         lastTransactionAt: new Date()
       }, { transaction });
-      
+
       await toWallet.update({
         balance: toBalanceAfter,
         lastTransactionAt: new Date()
       }, { transaction });
-      
+
       await transaction.commit();
       console.log(`✅ Transfer completed: ${transferAmount} NGN from ${fromUserId} to ${toUserId}`);
       return { debitTxn, creditTxn };
     } catch (error) {
       await transaction.rollback();
       console.error('❌ Error transferring between wallets:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Credit pending balance (locked until release date)
+   * Used when booking payment is received
+   */
+  async creditPending(userId, amount, bookingId, releaseDate, metadata = {}) {
+    const transaction = await sequelize.transaction();
+
+    try {
+      const wallet = await this.getOrCreateWallet(userId);
+
+      if (wallet.status !== 'active') {
+        throw new Error('Wallet is not active');
+      }
+
+      const creditAmount = parseFloat(amount);
+      const availableBalanceBefore = parseFloat(wallet.availableBalance);
+      const pendingBalanceBefore = parseFloat(wallet.pendingBalance);
+      const pendingBalanceAfter = pendingBalanceBefore + creditAmount;
+      const totalBalanceBefore = availableBalanceBefore + pendingBalanceBefore;
+      const totalBalanceAfter = availableBalanceBefore + pendingBalanceAfter;
+
+      const reference = `PENDING-${Date.now()}-${userId.substring(0, 8)}`;
+
+      const txn = await WalletTransaction.create({
+        walletId: wallet.id,
+        userId,
+        type: 'credit',
+        amount: creditAmount,
+        balanceBefore: totalBalanceBefore,
+        balanceAfter: totalBalanceAfter,
+        availableBalanceBefore,
+        availableBalanceAfter: availableBalanceBefore, // No change
+        pendingBalanceBefore,
+        pendingBalanceAfter,
+        releaseDate,
+        reference,
+        description: `Booking payment (pending release on ${releaseDate})`,
+        status: 'pending',
+        paymentMethod: 'paystack',
+        bookingId,
+        metadata: {
+          ...metadata,
+          type: 'booking_payment',
+          releaseDate
+        }
+      }, { transaction });
+
+      await wallet.update({
+        pendingBalance: pendingBalanceAfter,
+        lastTransactionAt: new Date()
+      }, { transaction });
+
+      await transaction.commit();
+      console.log(`✅ Pending balance credited: ${creditAmount} NGN for user ${userId}, release: ${releaseDate}`);
+      return txn;
+    } catch (error) {
+      await transaction.rollback();
+      console.error('❌ Error crediting pending balance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Debit pending balance (for cancellations/refunds)
+   */
+  async debitPending(userId, amount, bookingId, reason = 'Booking cancelled') {
+    const transaction = await sequelize.transaction();
+
+    try {
+      const wallet = await this.getOrCreateWallet(userId);
+
+      const debitAmount = parseFloat(amount);
+      const availableBalanceBefore = parseFloat(wallet.availableBalance);
+      const pendingBalanceBefore = parseFloat(wallet.pendingBalance);
+
+      if (pendingBalanceBefore < debitAmount) {
+        throw new Error('Insufficient pending balance');
+      }
+
+      const pendingBalanceAfter = pendingBalanceBefore - debitAmount;
+      const totalBalanceBefore = availableBalanceBefore + pendingBalanceBefore;
+      const totalBalanceAfter = availableBalanceBefore + pendingBalanceAfter;
+
+      const reference = `PENDING-DEBIT-${Date.now()}-${userId.substring(0, 8)}`;
+
+      const txn = await WalletTransaction.create({
+        walletId: wallet.id,
+        userId,
+        type: 'debit',
+        amount: debitAmount,
+        balanceBefore: totalBalanceBefore,
+        balanceAfter: totalBalanceAfter,
+        availableBalanceBefore,
+        availableBalanceAfter: availableBalanceBefore, // No change
+        pendingBalanceBefore,
+        pendingBalanceAfter,
+        reference,
+        description: reason,
+        status: 'completed',
+        paymentMethod: 'wallet',
+        bookingId,
+        metadata: {
+          type: 'pending_refund',
+          reason
+        }
+      }, { transaction });
+
+      await wallet.update({
+        pendingBalance: pendingBalanceAfter,
+        lastTransactionAt: new Date()
+      }, { transaction });
+
+      await transaction.commit();
+      console.log(`✅ Pending balance debited: ${debitAmount} NGN from user ${userId}`);
+      return txn;
+    } catch (error) {
+      await transaction.rollback();
+      console.error('❌ Error debiting pending balance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Release pending balance to available (on check-in date)
+   */
+  async releasePending(bookingId) {
+    const transaction = await sequelize.transaction();
+
+    try {
+      // Import Booking model dynamically to avoid circular dependency
+      const { default: Booking } = await import('../schema/Booking.js');
+
+      const booking = await Booking.findByPk(bookingId, { transaction });
+      if (!booking) {
+        throw new Error('Booking not found');
+      }
+
+      if (booking.walletStatus !== 'pending') {
+        throw new Error(`Cannot release: wallet status is ${booking.walletStatus}`);
+      }
+
+      const originalTxn = await WalletTransaction.findByPk(
+        booking.walletTransactionId,
+        { transaction }
+      );
+
+      if (!originalTxn) {
+        throw new Error('Original wallet transaction not found');
+      }
+
+      const wallet = await Wallet.findByPk(originalTxn.walletId, { transaction });
+      if (!wallet) {
+        throw new Error('Wallet not found');
+      }
+
+      const releaseAmount = parseFloat(originalTxn.amount);
+      const availableBalanceBefore = parseFloat(wallet.availableBalance);
+      const pendingBalanceBefore = parseFloat(wallet.pendingBalance);
+      const availableBalanceAfter = availableBalanceBefore + releaseAmount;
+      const pendingBalanceAfter = pendingBalanceBefore - releaseAmount;
+      const totalBalance = availableBalanceAfter + pendingBalanceAfter;
+
+      // Create release transaction
+      const reference = `RELEASE-${Date.now()}-${booking.ownerId.substring(0, 8)}`;
+
+      await WalletTransaction.create({
+        walletId: wallet.id,
+        userId: booking.ownerId,
+        type: 'transfer_in',
+        amount: releaseAmount,
+        balanceBefore: totalBalance,
+        balanceAfter: totalBalance,
+        availableBalanceBefore,
+        availableBalanceAfter,
+        pendingBalanceBefore,
+        pendingBalanceAfter,
+        reference,
+        description: `Pending funds released for booking ${bookingId}`,
+        status: 'completed',
+        paymentMethod: 'wallet',
+        bookingId,
+        relatedTransactionId: originalTxn.id,
+        metadata: {
+          type: 'pending_release',
+          originalTransactionId: originalTxn.id
+        }
+      }, { transaction });
+
+      // Update wallet balances
+      await wallet.update({
+        availableBalance: availableBalanceAfter,
+        pendingBalance: pendingBalanceAfter,
+        lastTransactionAt: new Date()
+      }, { transaction });
+
+      // Update original transaction status
+      await originalTxn.update({ status: 'completed' }, { transaction });
+
+      // Update booking wallet status
+      await booking.update({ walletStatus: 'released' }, { transaction });
+
+      await transaction.commit();
+      console.log(`✅ Pending balance released: ${releaseAmount} NGN for booking ${bookingId}`);
+      return wallet;
+    } catch (error) {
+      await transaction.rollback();
+      console.error('❌ Error releasing pending balance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get pending balance breakdown for a user
+   */
+  async getPendingBalance(userId) {
+    try {
+      const wallet = await this.getOrCreateWallet(userId);
+
+      // Get pending transactions
+      const pendingTransactions = await WalletTransaction.findAll({
+        where: {
+          userId,
+          status: 'pending',
+          type: 'credit'
+        },
+        order: [['releaseDate', 'ASC']],
+        include: [{
+          model: Booking,
+          as: 'booking',
+          attributes: ['id', 'checkInDate', 'propertyId']
+        }]
+      });
+
+      return {
+        totalPending: parseFloat(wallet.pendingBalance),
+        totalAvailable: parseFloat(wallet.availableBalance),
+        pendingTransactions: pendingTransactions.map(txn => ({
+          amount: parseFloat(txn.amount),
+          releaseDate: txn.releaseDate,
+          bookingId: txn.bookingId,
+          description: txn.description
+        }))
+      };
+    } catch (error) {
+      console.error('❌ Error getting pending balance:', error);
       throw error;
     }
   }

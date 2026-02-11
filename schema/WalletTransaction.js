@@ -43,15 +43,45 @@ const WalletTransaction = sequelize.define('WalletTransaction', {
       min: 0.01
     }
   },
+  currency: {
+    type: DataTypes.STRING(3),
+    defaultValue: 'NGN',
+    allowNull: false
+  },
   balanceBefore: {
     type: DataTypes.DECIMAL(15, 2),
     allowNull: false,
-    comment: 'Wallet balance before transaction'
+    comment: 'Total wallet balance before transaction'
   },
   balanceAfter: {
     type: DataTypes.DECIMAL(15, 2),
     allowNull: false,
-    comment: 'Wallet balance after transaction'
+    comment: 'Total wallet balance after transaction'
+  },
+  availableBalanceBefore: {
+    type: DataTypes.DECIMAL(15, 2),
+    allowNull: true,
+    comment: 'Available balance before transaction'
+  },
+  availableBalanceAfter: {
+    type: DataTypes.DECIMAL(15, 2),
+    allowNull: true,
+    comment: 'Available balance after transaction'
+  },
+  pendingBalanceBefore: {
+    type: DataTypes.DECIMAL(15, 2),
+    allowNull: true,
+    comment: 'Pending balance before transaction'
+  },
+  pendingBalanceAfter: {
+    type: DataTypes.DECIMAL(15, 2),
+    allowNull: true,
+    comment: 'Pending balance after transaction'
+  },
+  releaseDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: true,
+    comment: 'Date when pending funds will be released to available'
   },
   reference: {
     type: DataTypes.STRING,

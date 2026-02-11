@@ -1040,6 +1040,29 @@ export const cancelBooking = async (bookingId, userId, cancellationReason = null
         console.log(`💰 Processing refund for booking ${bookingId}, amount: ${booking.totalPrice}`);
 
         const walletService = (await import('./walletService.js')).default;
+
+        // ✨ NEW: Handle pending balance refund
+        if (booking.walletStatus === 'pending' && booking.walletTransactionId) {
+          console.log('💰 Debiting landlord pending balance for cancelled booking');
+
+          // Get the original wallet transaction to find the amount
+          const WalletTransaction = (await import('../schema/WalletTransaction.js')).default;
+          const walletTxn = await WalletTransaction.findByPk(booking.walletTransactionId);
+
+          if (walletTxn) {
+            // Debit landlord's pending balance
+            await walletService.debitPending(
+              booking.ownerId,
+              walletTxn.amount,
+              booking.id,
+              `Booking cancelled: ${cancellationReason || 'No reason provided'}`
+            );
+
+            console.log(`✅ Landlord pending balance debited: ${walletTxn.amount}`);
+          }
+        }
+
+        // Refund user (via Paystack or wallet)
         await walletService.processRefund(
           booking.userId,
           booking.totalPrice,
@@ -1331,7 +1354,7 @@ export const rejectBooking = async (bookingId, userId, ownerNotes = null) => {
 
     // If payment was completed, mark for refund
     const shouldRefund = booking.paymentStatus === 'completed';
-    
+
     // Update booking status
     await booking.update({
       status: 'rejected',
@@ -1346,7 +1369,7 @@ export const rejectBooking = async (bookingId, userId, ownerNotes = null) => {
         const payment = await Payment.findOne({
           where: { reference: booking.transactionId }
         });
-        
+
         if (payment) {
           await payment.update({
             status: 'refund_pending',
@@ -1396,7 +1419,7 @@ export const rejectBooking = async (bookingId, userId, ownerNotes = null) => {
           reason: ownerNotes || 'Property owner rejected the booking',
           refundStatus: shouldRefund ? 'Your payment will be refunded within 5-7 business days' : 'No payment was made'
         });
-        
+
         // Send email notification
         await sendEmail({
           to: guest.email,

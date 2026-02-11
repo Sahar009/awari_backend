@@ -426,9 +426,9 @@ class PaystackService {
             if (booking) {
                 // Update booking if it already exists (old flow) or was just created (new flow)
                 const previousStatus = booking.status;
-                
+
                 // For shortlets and hotels, check availability one more time before confirming
-                if (previousStatus === 'pending' && 
+                if (previousStatus === 'pending' &&
                     (booking.bookingType === 'shortlet' || booking.bookingType === 'hotel')) {
                     try {
                         const { checkDateRangeAvailability } = await import('../../services/availabilityService.js');
@@ -437,7 +437,7 @@ class PaystackService {
                             booking.checkInDate,
                             booking.checkOutDate
                         );
-                        
+
                         if (!availabilityCheck.available) {
                             console.error('❌ [Paystack Webhook] Dates no longer available for booking:', booking.id);
                             // Update booking to failed status
@@ -446,13 +446,13 @@ class PaystackService {
                                 status: 'cancelled',
                                 failureReason: 'Dates no longer available - another booking was confirmed first'
                             });
-                            
+
                             // Update payment to refund pending
                             await payment.update({
                                 status: 'refund_pending',
                                 failureReason: 'Dates no longer available'
                             });
-                            
+
                             console.log('⚠️ [Paystack Webhook] Booking cancelled due to unavailable dates, refund pending');
                             return; // Exit early
                         }
@@ -461,7 +461,7 @@ class PaystackService {
                         // Continue with booking confirmation if availability check fails
                     }
                 }
-                
+
                 await booking.update({
                     paymentStatus: 'completed',
                     paymentMethod,
@@ -526,6 +526,68 @@ class PaystackService {
                 } catch (receiptError) {
                     console.error('❌ [Paystack Webhook] Error sending booking receipt:', receiptError);
                     // Don't fail the payment processing if receipt email fails
+                }
+            }
+
+            // ✨ NEW: Credit landlord's pending wallet balance after successful payment
+            if (booking && booking.ownerId && booking.paymentStatus === 'completed') {
+                try {
+                    console.log('💰 [Paystack Webhook] Crediting landlord pending balance');
+
+                    // Import services
+                    const walletService = (await import('../../services/walletService.js')).default;
+                    const bookingFeeService = (await import('../../services/bookingFeeService.js')).default;
+                    const Property = (await import('../../schema/Property.js')).default;
+
+                    // Get property to determine type for fee calculation
+                    const property = await Property.findByPk(booking.propertyId);
+                    const propertyType = property?.type || 'shortlet';
+
+                    // Calculate fees
+                    const fees = await bookingFeeService.calculateFees(
+                        booking.totalPrice,
+                        propertyType
+                    );
+
+                    console.log('💰 [Paystack Webhook] Fee calculation:', {
+                        grossAmount: booking.totalPrice,
+                        fees: fees.totalFees,
+                        netAmount: fees.netAmount
+                    });
+
+                    // Credit pending balance (locked until check-in)
+                    const walletTransaction = await walletService.creditPending(
+                        booking.ownerId,
+                        fees.netAmount,
+                        booking.id,
+                        booking.checkInDate,
+                        {
+                            grossAmount: booking.totalPrice,
+                            serviceFee: fees.serviceFee,
+                            taxAmount: fees.taxAmount,
+                            platformFee: fees.platformFee,
+                            netAmount: fees.netAmount,
+                            paymentReference: reference
+                        }
+                    );
+
+                    // Update booking with wallet info
+                    await booking.update({
+                        walletStatus: 'pending',
+                        walletTransactionId: walletTransaction.id,
+                        walletReleaseDate: booking.checkInDate
+                    });
+
+                    console.log('✅ [Paystack Webhook] Landlord pending balance credited:', {
+                        amount: fees.netAmount,
+                        releaseDate: booking.checkInDate,
+                        transactionId: walletTransaction.id
+                    });
+
+                } catch (walletError) {
+                    console.error('❌ [Paystack Webhook] Error crediting landlord wallet:', walletError);
+                    // Don't fail the payment processing if wallet crediting fails
+                    // This can be handled manually by admin
                 }
             }
 

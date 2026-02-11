@@ -176,6 +176,24 @@ const Booking = sequelize.define('Booking', {
     allowNull: true
   },
 
+  // Wallet integration
+  walletStatus: {
+    type: DataTypes.ENUM('none', 'pending', 'released', 'refunded'),
+    defaultValue: 'none',
+    allowNull: false,
+    comment: 'Status of wallet crediting for this booking'
+  },
+  walletTransactionId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    comment: 'Reference to the wallet transaction that credited the landlord'
+  },
+  walletReleaseDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: true,
+    comment: 'Date when pending funds will be released to available balance'
+  },
+
   // External platform booking details
   externalBookingId: {
     type: DataTypes.STRING(255),
