@@ -53,6 +53,11 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING(20),
     allowNull: true
   },
+  companyName: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    comment: 'Company name for business users (landlords, agents, hotel providers, buyers)'
+  },
   avatarUrl: {
     type: DataTypes.STRING(500),
     allowNull: true
