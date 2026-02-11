@@ -71,17 +71,17 @@ export const updateUserRoleValidation = [
 
 export const updateUserProfileValidation = [
   param('userId').isUUID().withMessage('userId must be a valid UUID'),
-  body('firstName').optional().isString().isLength({ min: 2, max: 100 }).withMessage('firstName must be 2-100 characters'),
-  body('lastName').optional().isString().isLength({ min: 2, max: 100 }).withMessage('lastName must be 2-100 characters'),
-  body('email').optional().isEmail().withMessage('Invalid email address'),
-  body('phone').optional().isString().isLength({ max: 25 }).withMessage('phone must be 25 characters or less'),
-  body('avatarUrl').optional().isURL().withMessage('avatarUrl must be a valid URL'),
-  body('address').optional().isString().isLength({ max: 500 }).withMessage('address must be 500 characters or less'),
-  body('city').optional().isString().isLength({ max: 100 }).withMessage('city must be 100 characters or less'),
-  body('state').optional().isString().isLength({ max: 100 }).withMessage('state must be 100 characters or less'),
-  body('language').optional().isString().isLength({ max: 10 }).withMessage('language must be 10 characters or less'),
-  body('bio').optional().isString().isLength({ max: 2000 }).withMessage('bio must be 2000 characters or less'),
-  body('socialLinks').optional().custom((value) => {
+  body('firstName').optional({ nullable: true }).isString().isLength({ min: 2, max: 100 }).withMessage('firstName must be 2-100 characters'),
+  body('lastName').optional({ nullable: true }).isString().isLength({ min: 2, max: 100 }).withMessage('lastName must be 2-100 characters'),
+  body('email').optional({ nullable: true }).isEmail().withMessage('Invalid email address'),
+  body('phone').optional({ nullable: true }).isString().isLength({ max: 25 }).withMessage('phone must be 25 characters or less'),
+  body('avatarUrl').optional({ nullable: true }).isURL().withMessage('avatarUrl must be a valid URL'),
+  body('address').optional({ nullable: true }).isString().isLength({ max: 500 }).withMessage('address must be 500 characters or less'),
+  body('city').optional({ nullable: true }).isString().isLength({ max: 100 }).withMessage('city must be 100 characters or less'),
+  body('state').optional({ nullable: true }).isString().isLength({ max: 100 }).withMessage('state must be 100 characters or less'),
+  body('language').optional({ nullable: true }).isString().isLength({ max: 10 }).withMessage('language must be 10 characters or less'),
+  body('bio').optional({ nullable: true }).isString().isLength({ max: 2000 }).withMessage('bio must be 2000 characters or less'),
+  body('socialLinks').optional({ nullable: true }).custom((value) => {
     if (typeof value === 'object') return true;
     if (typeof value === 'string') {
       JSON.parse(value);
@@ -89,7 +89,7 @@ export const updateUserProfileValidation = [
     }
     throw new Error('socialLinks must be an object or JSON string');
   }),
-  body('preferences').optional().custom((value) => {
+  body('preferences').optional({ nullable: true }).custom((value) => {
     if (typeof value === 'object') return true;
     if (typeof value === 'string') {
       JSON.parse(value);
@@ -97,12 +97,12 @@ export const updateUserProfileValidation = [
     }
     throw new Error('preferences must be an object or JSON string');
   }),
-  body('dateOfBirth').optional().isISO8601().withMessage('dateOfBirth must be a valid date'),
-  body('gender').optional().isIn(['male', 'female', 'other']).withMessage('gender must be male, female, or other'),
-  body('emailVerified').optional().isBoolean().withMessage('emailVerified must be boolean').toBoolean(),
-  body('phoneVerified').optional().isBoolean().withMessage('phoneVerified must be boolean').toBoolean(),
-  body('kycVerified').optional().isBoolean().withMessage('kycVerified must be boolean').toBoolean(),
-  body('profileCompleted').optional().isBoolean().withMessage('profileCompleted must be boolean').toBoolean()
+  body('dateOfBirth').optional({ nullable: true }).isISO8601().withMessage('dateOfBirth must be a valid date'),
+  body('gender').optional({ nullable: true }).isIn(['male', 'female', 'other']).withMessage('gender must be male, female, or other'),
+  body('emailVerified').optional({ nullable: true }).isBoolean().withMessage('emailVerified must be boolean').toBoolean(),
+  body('phoneVerified').optional({ nullable: true }).isBoolean().withMessage('phoneVerified must be boolean').toBoolean(),
+  body('kycVerified').optional({ nullable: true }).isBoolean().withMessage('kycVerified must be boolean').toBoolean(),
+  body('profileCompleted').optional({ nullable: true }).isBoolean().withMessage('profileCompleted must be boolean').toBoolean()
 ];
 
 export const propertiesManagementValidation = [
