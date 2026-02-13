@@ -1,5 +1,5 @@
-import Booking from '../schema/Booking.js';
-import walletService from './walletService.js';
+import Booking from '../../schema/Booking.js';
+import walletService from '../walletService.js';
 import { Op } from 'sequelize';
 
 /**

@@ -101,11 +101,15 @@
         <div class="content">
             <p>Hi <strong><%= user.firstName %></strong>,</p>
             
+            <% if (typeof isAutoCancel !== 'undefined' && isAutoCancel) { %>
+            <p>We're writing to inform you that your booking has been <strong>automatically cancelled</strong> because it was not confirmed by the property owner within <strong><%= autoCancelHours %> hours</strong>.</p>
+            <% } else { %>
             <p>We're writing to inform you that your booking has been cancelled.</p>
+            <% } %>
             
             <div class="booking-details">
                 <h3>Booking Details</h3>
-                <% if (property) { %>
+                <% if (typeof property !== 'undefined' && property) { %>
                 <div class="detail-row">
                     <span class="detail-label">Property:</span>
                     <span class="detail-value"><%= property.title %></span>
@@ -115,15 +119,19 @@
                     <span class="detail-value"><%= property.address %></span>
                 </div>
                 <% } %>
-                <% if (booking) { %>
+                <% if (typeof booking !== 'undefined' && booking) { %>
+                <% if (booking.checkInDate) { %>
                 <div class="detail-row">
                     <span class="detail-label">Check-in Date:</span>
                     <span class="detail-value"><%= new Date(booking.checkInDate).toLocaleDateString() %></span>
                 </div>
+                <% } %>
+                <% if (booking.checkOutDate) { %>
                 <div class="detail-row">
                     <span class="detail-label">Check-out Date:</span>
                     <span class="detail-value"><%= new Date(booking.checkOutDate).toLocaleDateString() %></span>
                 </div>
+                <% } %>
                 <div class="detail-row">
                     <span class="detail-label">Booking ID:</span>
                     <span class="detail-value">#<%= booking.id.slice(-8) %></span>
@@ -132,9 +140,14 @@
             </div>
             
             <div class="refund-info">
+                <% if (typeof refundProcessed !== 'undefined' && refundProcessed) { %>
+                <h4>✅ Refund Processed</h4>
+                <p>A full refund of <strong>₦<%= refundAmount %></strong> has been credited to your <strong>AWARI Wallet</strong> (available balance). You can use it for future bookings or withdraw it at any time.</p>
+                <% } else { %>
                 <h4>Refund Information:</h4>
                 <p>If you're eligible for a refund, it will be processed within 5-7 business days and credited back to your original payment method.</p>
                 <p>You will receive a separate email confirmation once the refund has been processed.</p>
+                <% } %>
             </div>
             
             <p>We're sorry for any inconvenience this may cause. If you have any questions about this cancellation or would like to book an alternative property, please don't hesitate to contact us.</p>

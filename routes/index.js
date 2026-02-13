@@ -20,6 +20,7 @@ import paystackWebhookRoutes from './paystackWebhookRoutes.js';
 import adminWithdrawalRoutes from './adminWithdrawalRoutes.js';
 import bookingFeeConfigRoutes from './bookingFeeConfigRoutes.js';
 import adminBookingRoutes from './adminBookingRoutes.js';
+import bookingConfigRoutes from './bookingConfigRoutes.js';
 import { sendEmail } from '../modules/notifications/email.js';
 
 const router = (app) => {
@@ -45,6 +46,7 @@ const router = (app) => {
   app.use('/api/hotel/dashboard', hotelDashboardRoutes);
   app.use('/api/admin/dashboard', adminDashboardRoutes);
   app.use('/api/booking-fees', bookingFeeConfigRoutes);
+  app.use('/api/admin/booking-config', bookingConfigRoutes);
 
   // Test email route
   app.get(`/api/test-email`, async (req, res) => {

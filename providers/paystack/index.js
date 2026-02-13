@@ -386,8 +386,23 @@ class PaystackService {
                         bookingId: booking.id
                     });
 
-                    // Note: Dates will be blocked when landlord/agent approves the booking
-                    // Not blocking automatically after payment - requires manual approval
+                    // Block dates immediately after paid booking creation to prevent double bookings
+                    if ((bookingData.bookingType === 'shortlet' || bookingData.bookingType === 'rental' || bookingData.bookingType === 'hotel') &&
+                        bookingData.checkInDate && bookingData.checkOutDate) {
+                        try {
+                            const { blockDatesForBooking } = await import('../../services/availabilityService.js');
+                            await blockDatesForBooking(
+                                booking.propertyId,
+                                booking.id,
+                                booking.checkInDate,
+                                booking.checkOutDate,
+                                booking.userId
+                            );
+                            console.log('✅ [Paystack Webhook] Dates blocked for new paid booking:', booking.id);
+                        } catch (blockError) {
+                            console.error('❌ [Paystack Webhook] Error blocking dates for new paid booking:', blockError);
+                        }
+                    }
                 } catch (bookingError) {
                     console.error('❌ [Paystack Webhook] Error creating booking from metadata:', bookingError);
                     // Update payment but mark as needing manual review
@@ -469,9 +484,11 @@ class PaystackService {
                     status: (booking.bookingType === 'shortlet' || booking.bookingType === 'hotel') && booking.status === 'pending' ? 'in_progress' : booking.status
                 });
 
-                // Block dates if booking was just confirmed (status changed from pending to confirmed)
-                if (previousStatus === 'pending' && booking.status === 'confirmed' &&
-                    (booking.bookingType === 'shortlet' || booking.bookingType === 'rental' || booking.bookingType === 'hotel')) {
+                // Block dates after successful payment to prevent double bookings
+                // Dates should be blocked when payment completes and booking moves to in_progress or confirmed
+                if (previousStatus === 'pending' &&
+                    (booking.bookingType === 'shortlet' || booking.bookingType === 'rental' || booking.bookingType === 'hotel') &&
+                    booking.checkInDate && booking.checkOutDate) {
                     try {
                         const { blockDatesForBooking } = await import('../../services/availabilityService.js');
                         await blockDatesForBooking(
@@ -481,9 +498,9 @@ class PaystackService {
                             booking.checkOutDate,
                             booking.userId
                         );
-                        console.log('✅ [Paystack Webhook] Dates blocked for existing booking:', booking.id);
+                        console.log('✅ [Paystack Webhook] Dates blocked for paid booking:', booking.id, '(status:', booking.status, ')');
                     } catch (blockError) {
-                        console.error('❌ [Paystack Webhook] Error blocking dates for existing booking:', blockError);
+                        console.error('❌ [Paystack Webhook] Error blocking dates for paid booking:', blockError);
                         // Don't fail the payment processing if date blocking fails
                     }
                 }

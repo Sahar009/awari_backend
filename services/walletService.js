@@ -327,7 +327,7 @@ class WalletService {
 
     try {
       const wallet = await this.getOrCreateWallet(userId);
-      const balanceBefore = parseFloat(wallet.balance);
+      const balanceBefore = parseFloat(wallet.availableBalance);
       const refundAmount = parseFloat(amount);
       const balanceAfter = balanceBefore + refundAmount;
       const reference = `REFUND-${Date.now()}-${userId.substring(0, 8)}`;
@@ -348,7 +348,7 @@ class WalletService {
       }, { transaction });
 
       await wallet.update({
-        balance: balanceAfter,
+        availableBalance: balanceAfter,
         lastTransactionAt: new Date()
       }, { transaction });
 

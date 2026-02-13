@@ -9,6 +9,7 @@ import { connectToDB } from './database/db.js';
 import { config } from './config/config.js';
 import { initializeFirebase } from './config/firebase.js';
 import websocketService from './services/websocketService.js';
+import { initCronJobs, stopCronJobs } from './services/cronScheduler.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -130,6 +131,9 @@ const startServer = async () => {
     // Initialize WebSocket server
     websocketService.initialize(server);
 
+    // Initialize Cron Jobs
+    initCronJobs();
+
     // Start server
     server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
@@ -156,11 +160,13 @@ process.on('uncaughtException', (err) => {
 
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully');
+  stopCronJobs();
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
   console.log('SIGINT received, shutting down gracefully');
+  stopCronJobs();
   process.exit(0);
 });
 
