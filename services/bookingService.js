@@ -1000,7 +1000,7 @@ export const updateBooking = async (bookingId, userId, updateData) => {
 /**
  * Cancel booking
  * @param {string} bookingId - Booking ID
- * @param {string} userId - User ID
+ * @param {string} userId - User ID (guest, owner, or admin)
  * @param {string} cancellationReason - Cancellation reason
  * @returns {Object} Result object
  */
@@ -1015,8 +1015,21 @@ export const cancelBooking = async (bookingId, userId, cancellationReason = null
       };
     }
 
-    // Check authorization
-    if (booking.userId !== userId && booking.ownerId !== userId) {
+    // Check authorization - allow guest, owner, or admin
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return {
+        success: false,
+        message: 'User not found',
+        statusCode: 404
+      };
+    }
+
+    const isGuest = booking.userId === userId;
+    const isOwner = booking.ownerId === userId;
+    const isAdmin = user.role === 'admin';
+
+    if (!isGuest && !isOwner && !isAdmin) {
       return {
         success: false,
         message: 'Unauthorized to cancel this booking',
@@ -1201,9 +1214,9 @@ export const cancelBooking = async (bookingId, userId, cancellationReason = null
 };
 
 /**
- * Confirm booking (owner only)
+ * Confirm booking (owner or admin)
  * @param {string} bookingId - Booking ID
- * @param {string} userId - User ID (property owner)
+ * @param {string} userId - User ID (property owner or admin)
  * @param {string} ownerNotes - Owner notes
  * @returns {Object} Result object
  */
@@ -1218,11 +1231,23 @@ export const confirmBooking = async (bookingId, userId, ownerNotes = null) => {
       };
     }
 
-    // Check if user is the property owner
-    if (booking.ownerId !== userId) {
+    // Check if user is the property owner or admin
+    const user = await User.findByPk(userId);
+    if (!user) {
       return {
         success: false,
-        message: 'Only property owner can confirm bookings',
+        message: 'User not found',
+        statusCode: 404
+      };
+    }
+
+    const isOwner = booking.ownerId === userId;
+    const isAdmin = user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
+      return {
+        success: false,
+        message: 'Only property owner or admin can confirm bookings',
         statusCode: 403
       };
     }
@@ -1352,35 +1377,52 @@ export const rejectBooking = async (bookingId, userId, ownerNotes = null) => {
       };
     }
 
-    // If payment was completed, mark for refund
-    const shouldRefund = booking.paymentStatus === 'completed';
+    // Process refund if payment was completed
+    let refundProcessed = false;
+    if (booking.paymentStatus === 'completed' && booking.totalPrice > 0) {
+      try {
+        // Process refund to user's wallet
+        await walletService.processRefund(
+          booking.userId,
+          booking.totalPrice,
+          `Refund for rejected booking #${bookingId.substring(0, 8)}`,
+          bookingId
+        );
+
+        refundProcessed = true;
+        console.log(`✅ Refund processed for rejected booking: ${booking.totalPrice} NGN`);
+
+        // Update payment record if exists
+        if (booking.transactionId) {
+          try {
+            const payment = await Payment.findOne({
+              where: { reference: booking.transactionId }
+            });
+
+            if (payment) {
+              await payment.update({
+                status: 'refunded',
+                failureReason: 'Booking rejected by property owner'
+              });
+              console.log('✅ Payment marked as refunded:', payment.id);
+            }
+          } catch (paymentError) {
+            console.error('Error updating payment record:', paymentError);
+          }
+        }
+      } catch (refundError) {
+        console.error('❌ Error processing refund for rejected booking:', refundError);
+        // Continue with rejection even if refund fails
+      }
+    }
 
     // Update booking status
     await booking.update({
       status: 'rejected',
-      paymentStatus: shouldRefund ? 'refund_pending' : booking.paymentStatus,
+      paymentStatus: refundProcessed ? 'refunded' : booking.paymentStatus,
       ownerNotes,
       failureReason: ownerNotes || 'Booking rejected by property owner'
     });
-
-    // Update payment record if exists
-    if (shouldRefund && booking.transactionId) {
-      try {
-        const payment = await Payment.findOne({
-          where: { reference: booking.transactionId }
-        });
-
-        if (payment) {
-          await payment.update({
-            status: 'refund_pending',
-            failureReason: 'Booking rejected by property owner'
-          });
-          console.log('✅ Payment marked for refund:', payment.id);
-        }
-      } catch (paymentError) {
-        console.error('Error updating payment for refund:', paymentError);
-      }
-    }
 
     // Fetch updated booking with relations
     const updatedBooking = await Booking.findByPk(bookingId, {

@@ -63,11 +63,12 @@ async function autoCancelBookings() {
         console.log(`⏰ [AUTO-CANCEL] Timeout: ${autoCancelHours} hours`);
         console.log(`⏰ [AUTO-CANCEL] Cutoff: bookings created before ${cutoffDate.toISOString()}`);
 
-        // Find bookings that are pending/in_progress and older than the cutoff
+        // Find bookings that are pending/in_progress for shortlets and hotels, older than the cutoff
         const expiredBookings = await Booking.findAll({
             where: {
                 status: { [Op.in]: ['pending', 'in_progress'] },
                 paymentStatus: { [Op.in]: ['completed', 'partial'] },
+                bookingType: { [Op.in]: ['shortlet', 'hotel'] },
                 createdAt: { [Op.lt]: cutoffDate }
             },
             include: [

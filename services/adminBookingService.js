@@ -644,6 +644,116 @@ class AdminBookingService {
             };
         }
     }
+
+    /**
+     * Confirm a booking (admin action)
+     * @param {string} bookingId - Booking ID
+     * @param {Object} confirmData - Confirmation data
+     * @returns {Object} Result
+     */
+    async confirmBooking(bookingId, confirmData) {
+        try {
+            const { ownerNotes, adminId } = confirmData;
+
+            const booking = await Booking.findByPk(bookingId);
+
+            if (!booking) {
+                return {
+                    success: false,
+                    statusCode: 404,
+                    message: 'Booking not found'
+                };
+            }
+
+            if (booking.status === 'confirmed') {
+                return {
+                    success: false,
+                    statusCode: 400,
+                    message: 'Booking is already confirmed'
+                };
+            }
+
+            if (booking.status === 'cancelled') {
+                return {
+                    success: false,
+                    statusCode: 400,
+                    message: 'Cannot confirm a cancelled booking'
+                };
+            }
+
+            // Use the existing confirmBooking service from bookingService
+            const { confirmBooking } = await import('./bookingService.js');
+            const result = await confirmBooking(bookingId, adminId, ownerNotes);
+
+            if (!result.success) {
+                return result;
+            }
+
+            return {
+                success: true,
+                message: 'Booking confirmed successfully by admin',
+                data: result.data
+            };
+        } catch (error) {
+            console.error('❌ Error confirming booking:', error);
+            return {
+                success: false,
+                message: 'Failed to confirm booking',
+                error: error.message
+            };
+        }
+    }
+
+    /**
+     * Cancel a booking (admin action)
+     * @param {string} bookingId - Booking ID
+     * @param {Object} cancelData - Cancellation data
+     * @returns {Object} Result
+     */
+    async cancelBooking(bookingId, cancelData) {
+        try {
+            const { cancellationReason, adminId } = cancelData;
+
+            const booking = await Booking.findByPk(bookingId);
+
+            if (!booking) {
+                return {
+                    success: false,
+                    statusCode: 404,
+                    message: 'Booking not found'
+                };
+            }
+
+            if (booking.status === 'cancelled') {
+                return {
+                    success: false,
+                    statusCode: 400,
+                    message: 'Booking is already cancelled'
+                };
+            }
+
+            // Use the existing cancelBooking service from bookingService
+            const { cancelBooking } = await import('./bookingService.js');
+            const result = await cancelBooking(bookingId, adminId, cancellationReason);
+
+            if (!result.success) {
+                return result;
+            }
+
+            return {
+                success: true,
+                message: 'Booking cancelled successfully by admin',
+                data: result.data
+            };
+        } catch (error) {
+            console.error('❌ Error cancelling booking:', error);
+            return {
+                success: false,
+                message: 'Failed to cancel booking',
+                error: error.message
+            };
+        }
+    }
 }
 
 export default new AdminBookingService();

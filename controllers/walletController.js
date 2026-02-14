@@ -10,6 +10,10 @@ class WalletController {
       
       const wallet = await walletService.getOrCreateWallet(userId);
       
+      const availableBalance = parseFloat(wallet.availableBalance || 0);
+      const pendingBalance = parseFloat(wallet.pendingBalance || 0);
+      const totalBalance = availableBalance + pendingBalance;
+      
       res.status(200).json({
         success: true,
         data: {
@@ -19,7 +23,9 @@ class WalletController {
           accountName: wallet.accountName,
           bankName: wallet.bankName,
           bankCode: wallet.bankCode,
-          balance: wallet.balance,
+          availableBalance,
+          pendingBalance,
+          totalBalance,
           currency: wallet.currency,
           status: wallet.status,
           lastTransactionAt: wallet.lastTransactionAt

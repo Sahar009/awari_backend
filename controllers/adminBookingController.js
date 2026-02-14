@@ -226,6 +226,71 @@ export const getStatistics = async (req, res) => {
     }
 };
 
+/**
+ * Confirm a booking (admin action)
+ */
+export const confirmBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { ownerNotes } = req.body;
+        const adminId = req.user.id;
+
+        const result = await adminBookingService.confirmBooking(id, {
+            ownerNotes,
+            adminId
+        });
+
+        if (!result.success) {
+            return res.status(result.statusCode || 500).json(result);
+        }
+
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error('❌ Error in confirmBooking controller:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to confirm booking',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Cancel a booking (admin action)
+ */
+export const cancelBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { cancellationReason } = req.body;
+        const adminId = req.user.id;
+
+        if (!cancellationReason) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cancellation reason is required'
+            });
+        }
+
+        const result = await adminBookingService.cancelBooking(id, {
+            cancellationReason,
+            adminId
+        });
+
+        if (!result.success) {
+            return res.status(result.statusCode || 500).json(result);
+        }
+
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error('❌ Error in cancelBooking controller:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to cancel booking',
+            error: error.message
+        });
+    }
+};
+
 export default {
     getAllBookings,
     getBookingDetails,
@@ -233,5 +298,7 @@ export default {
     approveBooking,
     rejectBooking,
     markAsPaid,
-    getStatistics
+    getStatistics,
+    confirmBooking,
+    cancelBooking
 };

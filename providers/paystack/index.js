@@ -338,15 +338,20 @@ class PaystackService {
             }
 
             console.log('✅ [Paystack Webhook] Processing successful payment:', reference);
-            console.log('✅ [Paystack Webhook] Payment metadata:', payment.metadata);
+            console.log('✅ [Paystack Webhook] Payment metadata:', JSON.stringify(payment.metadata, null, 2));
+            console.log('✅ [Paystack Webhook] Payment bookingId:', payment.bookingId);
+            console.log('✅ [Paystack Webhook] createBookingOnSuccess flag:', payment.metadata?.createBookingOnSuccess);
+            console.log('✅ [Paystack Webhook] Has bookingData:', !!payment.metadata?.bookingData);
 
             let booking = payment.bookingId ? await Booking.findByPk(payment.bookingId) : null;
+            console.log('✅ [Paystack Webhook] Existing booking found:', !!booking);
             const amountMajor = data?.amount ? (Number(data.amount) / PAYSTACK_DECIMAL_FACTOR).toFixed(2) : payment.amount;
             const paymentMethod = this.mapChannelToPaymentMethod(data?.channel);
 
             // Check if we need to create booking from metadata (Payment-First Flow)
             if (!booking && payment.metadata?.createBookingOnSuccess && payment.metadata?.bookingData) {
                 console.log('🆕 [Paystack Webhook] Creating booking from payment metadata');
+                console.log('🆕 [Paystack Webhook] Full booking data:', JSON.stringify(payment.metadata.bookingData, null, 2));
 
                 try {
                     const bookingData = payment.metadata.bookingData;
@@ -374,7 +379,15 @@ class PaystackService {
                     });
 
                     console.log('✅ [Paystack Webhook] Booking created successfully:', booking.id);
-                    console.log('✅ [Paystack Webhook] Created booking pricing:', {
+                    console.log('✅ [Paystack Webhook] Created booking details:', {
+                        id: booking.id,
+                        propertyId: booking.propertyId,
+                        userId: booking.userId,
+                        status: booking.status,
+                        paymentStatus: booking.paymentStatus,
+                        bookingType: booking.bookingType,
+                        checkInDate: booking.checkInDate,
+                        checkOutDate: booking.checkOutDate,
                         basePrice: booking.basePrice,
                         serviceFee: booking.serviceFee,
                         taxAmount: booking.taxAmount,
@@ -385,6 +398,7 @@ class PaystackService {
                     await payment.update({
                         bookingId: booking.id
                     });
+                    console.log('✅ [Paystack Webhook] Payment record updated with bookingId:', booking.id);
 
                     // Block dates immediately after paid booking creation to prevent double bookings
                     if ((bookingData.bookingType === 'shortlet' || bookingData.bookingType === 'rental' || bookingData.bookingType === 'hotel') &&
@@ -423,6 +437,14 @@ class PaystackService {
                     });
                     return; // Exit early since booking creation failed
                 }
+            } else {
+                // Log why booking creation was skipped
+                console.log('⚠️ [Paystack Webhook] Booking creation skipped:', {
+                    hasExistingBooking: !!booking,
+                    hasCreateFlag: payment.metadata?.createBookingOnSuccess,
+                    hasBookingData: !!payment.metadata?.bookingData,
+                    paymentMetadataKeys: payment.metadata ? Object.keys(payment.metadata) : []
+                });
             }
 
             // Update payment record

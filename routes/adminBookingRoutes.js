@@ -112,4 +112,28 @@ router.post(
     adminBookingController.rejectBooking
 );
 
+/**
+ * @route   POST /api/admin/bookings/:id/confirm
+ * @desc    Confirm a booking (move from in_progress to confirmed)
+ * @access  Admin
+ * @param   {string} id - Booking ID
+ * @body    {string} ownerNotes - Optional notes from admin
+ */
+router.post(
+    '/:id/confirm',
+    adminBookingController.confirmBooking
+);
+
+/**
+ * @route   POST /api/admin/bookings/:id/cancel
+ * @desc    Cancel a booking
+ * @access  Admin
+ * @param   {string} id - Booking ID
+ * @body    {string} cancellationReason - Reason for cancellation
+ */
+router.post(
+    '/:id/cancel',
+    adminBookingController.cancelBooking
+);
+
 export default router;
